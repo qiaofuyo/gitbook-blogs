@@ -261,3 +261,6 @@ re #JIRA_ID
 fix #JIRA_ID
 ```
 
+## 示意图
+
+![git工作示意图](.gitbook/assets/git/管理方式.png)
