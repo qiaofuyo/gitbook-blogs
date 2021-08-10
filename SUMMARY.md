@@ -1,4 +1,5 @@
-# Table of contents
+# Summary
 
-* [首页](README.md)
-* [js理论基础](js.md)
+* [首页](/pages/home.md)
+* [js理论基础](/pages/js.md)
+
