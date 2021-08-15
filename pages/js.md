@@ -1,194 +1,5 @@
 # JavaScript的基础理论
 
-## 循环迭代
-
-> 把一个动作重复很多次（实际上重复的次数有可能为 0）。各种循环机制提供了不同的方法去确定循环的开始和结束。不同情况下，某一种类型循环会比其它的循环用起来更简单。
-
-- **for** 语句
-
-```js
-for (let i = 0; i < arr.length; i++) {
-    ...
-}
-```
-
-- **while** 语句
-
-```js
-let i = 0
-while (i < 10){
-    i++
-}
-console.log(i);
-```
-
-- **do...while** 语句
-
-```js
-let i = 0
-do {
-    i++
-} while (i > 5)
-console.log(i);
-```
-
-- **label** 语句
-
-> **标记语句**只能和 [`break`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Statements/break) 或 [`continue`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Statements/continue) 语句一起使用。标记就是在一条语句前面加个可以引用的标识符，从而清晰的表示接下来执行哪里的代码。
->
-> 标记语句非常罕见，通常情况下，可以使用函数调用而不是（基于标记的）循环跳转。
-
-```js
-let str = ''
-
-loop1:
-for (let i = 0; i < 5; i++) {
-  if (i === 1) {
-    continue loop1
-  }
-  str = str + i
-}
-
-console.log(str);
-// expected output: "0234"
-```
-
-- **break** 语句
-
-> 用于终止当前循环，或者是链接到 **label** 语句。
->
-> 注：**return** 语句是终止函数的执行，并返回一个指定的值给函数调用者。
-
-```js
-for (let i = 0; i < 3; i++) {
-    if (i == 1) break
-    console.log(i);
-}
-// 0
-```
-
-`js` 没有类似 `goto` 语句可以跳转到任意地方的语句，所以 `break` 语句必须内嵌在它引用的标签中。
-
-```js
-// break 内嵌在 loop2 中，loop2 内嵌在 loop1 中，这样是可以的
-// break loop1：满足条件时会终止外层循环
-// break loop2：满足条件时会终止内层循环
-let i = 0, j = 0
-loop1:while (i < 3){
-    loop2:while (j < 3){
-        if (i === 1 && j === 1) break loop1
-        console.log(i,j)
-        j++
-    }
-    i++
-    j = 0
-}
-```
-
-代码块外层不是循环或选择结构时，即为顺序结构时使用 `break` 必须附带使用 `label` 语句：
-
-```js
-// 跳转的外层不是循环或选择结构
-loop: {
-    console.log('1');
-    break loop
-    console.log(':-(');
-}
-```
-
-```js
-// 跳转的外层是循环结构
-let i = 0
-while (i<3){
-    {
-        console.log(i);
-        break
-        console.log(':-(');
-    }
-    i++
-}
-```
-
-- **continue** 语句
-
-> 用于跳过代码块的剩余部分并进入下一次循环，或者是链接到 **label** 语句。
-
-```js
-for (let i = 0; i < 3; i++) {
-    if (i == 1) continue
-    console.log(i);
-}
-// 0
-// 2
-```
-
-- **for...in** 语句
-
-> 利用关键字 **in** 以任意顺序遍历一个对象的除[Symbol](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol)以外的[可枚举](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Enumerability_and_ownership_of_properties)属性。
-
-```js
-// 用来迭代对象的属性名（包括它的原型链上的可枚举属性）
-// 不建议用来遍历数组，其key会是索引
-for (let key in obj) {
-    ...
-}
-```
-
-- **for...of** 语句
-
-> [可迭代对象](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Iteration_protocols) 包括 [`Array`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Array)，[`Map`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Map)，[`Set`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Set)，[`String`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/String)，[`TypedArray`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/TypedArray)，[arguments](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions_and_function_scope/arguments) 对象等等。
-
-```js
-// 用来遍历可迭代对象的属性值（不包括它的原型链上的可枚举属性）
-// 遍历obj会报错obj不可迭代
-for (let value of arr) {
-    ...
-}
-```
-
-- **tips:** **for...in** 与 **for...of** 的区别
-
-> 两者都是迭代一些东西，区别在于迭代方式不同:
->
-> 前者以任意顺序迭代对象的可枚举属性（包含原型链）;
->
-> 后者遍历可迭代对象定义要迭代的值（不包含原型链）。
-
-```js
-// 给构造函数 Object 和 Array 分别增加一个自定义属性
-Object.prototype.objCustom = function() {}
-Array.prototype.arrCustom = function() {}
-
-// 构造函数Object实例化，其原型链上有 objCustom 属性
-let obj = {
-    name: 'wife',
-    age: 18,
-    alive: true,
-    address: {
-        city: 'xg'
-    },
-    say: () => 'i love you'
-}
-// 构造函数Array实例化，其原型链上 arrCustom 和 objCustom 属性
-// 因为 Array 是 Object 的实例化继承到了 objCustom 属性
-let arr = [17, 18, 19, 20]
-arr.foo = 21
-arr.bar = obj
-
-console.log(arr);
-// 迭代arr的所有可枚举属性（包含原型链上的）
-for (let key in arr) {
-    // 当前的枚举属性是自身的（不是继承的，即不是原型链上的）返回true
-    if (arr.hasOwnProperty(key)) {  // 该方法继承于Object
-        console.log(arr[key]);
-    }
-}
-//
-for (let key of arr) {
-    console.log(key);  // 17 18 19 20
-}
-```
-
 ## 预解析
 
 > js引擎的运行分为两步：预解析（词法分析+语法分析），执行代码。
@@ -236,23 +47,110 @@ let a = 'xg'
 
 如果是多线程则会引发复杂的同步问题，比如，假定JavaScript同时有两个线程，一个线程在某个DOM节点上添加内容，另一个线程删除了这个节点，这时浏览器应该以哪个线程为准，为了避免复杂性所以JavaScript是单线程的。
 
-为了利用多核CPU的计算能力，HTML5提出 **Web Worker** 标准，允许JavaScript脚本创建多个线程，但是子线程完全受主线程控制，且不得操作DOM。所以，这个新标准并没有改变JavaScript单线程的本质。
+为了利用多核CPU的计算能力，HTML5提出  [**Web Worker**](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Workers_API)，允许JavaScript脚本创建多个线程，但是子线程完全受主线程控制，且不得操作DOM。所以，这个新标准并没有改变JavaScript单线程的本质。
 
-### 任务队列
+### 同步任务、异步任务
 
 > js中所有任务可分为 `同步任务` 和 `异步任务`。
 
 **同步任务**
 
-在主线程上排队执行的任务形成 `执行栈`，只有栈顶任务执行完毕出栈后，才能执行下一任务。
+同步任务指不会被引擎挂起，在主线程上排队执行的任务。排队（压栈）形成了 `执行栈`，只有栈顶任务执行完毕出栈后，才能执行下一任务。
+
+Hint:  `promise` 的实例化的过程是属于同步的，而 `.then` 中的回调函数是属于异步的。
 
 **异步任务**
 
-> 包含：IO设备的事件，用户产生的鼠标点击、页面滚动等事件，请求服务器事件，setTimeOut() ... ...
+> 又分为 `宏任务` 和 `微任务`。
+>
+> 包含：IO设备的事件，用户产生的鼠标点击、页面滚动等事件，ajax请求，setTimeOut() ... ...
 
-不进入主线程，而是进入`任务队列`（task queue）的任务，只要主线程 `空` 了（由进程检测），就会让该异步任务的 `回调函数` 进入主线程执行。
+异步任务指会被引擎挂起，不进入主线程，而是进入`任务队列`（task queue）的任务。不需要获取到异步结果也能执行下一任务，获取到异步结果后由引擎来决定其回调函数是否进入主线程执行。
+
+### 任务队列
+
+JavaScript 运行时，除了一个正在运行的主线程，引擎还提供一个`任务队列`（task queue），里面是各种需要当前程序处理的异步任务。（根据异步任务的类型，实际存在多个任务队列。为了方便理解，这里假设只存在一个队列。）
+
+1. 主线程会先执行所有的同步任务，遇到异步任务的代码先不予执行；
+2. 执行完同步任务（由js引擎的`监控进程`检测执行栈是否为空）后，如果任务队列中没有执行完的异步任务的 `回调函数`，则会去执行其他异步任务；如果任务队列中有执行完的异步任务的 `回调函数`，则让其进入主线程作为同步任务立即执行；
+3. 重复1、2过程执行没有任何任务，这就是 **事件循环**。
+
+![事件循环流程图](F:\专业\gitbook-blogs\pages\20190214094730128.jpg)
 
 `回调函数` 是指会被主线程 `挂起来` 的代码，异步任务必须指定回调函数，主线程执行异步任务就是执行其对应的回调函数。
+
+```js
+<script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+    $("button").click(function() {
+        init()
+    });
+});
+
+function init() {
+    debugger
+    console.log(1);
+    setTimeout(function() {
+        console.log(2);
+    }, 1000);
+    axios.get('http://39.107.221.146/api/homeslide')
+        .then(function(response) {
+        console.log(3);
+    })
+        .catch(function(error) {
+        console.log(4);
+    });
+    console.log(5);
+    axios.get('http://39.107.221.146/api/homenav')
+        .then(function(response) {
+        console.log(6);
+    })
+        .catch(function(error) {
+        console.log(7);
+    });
+    console.log(8);
+}
+</script>
+```
+
+### 宏任务、微任务
+
+> 异步任务分为 `宏任务` 和 `微任务`。
+
+1. 首先 `script标签` 是一个宏任务，在当前宏任务执行完之前是不会执行下一个宏任务；
+2. 在执行宏任务过程中遇到微任务时略过，执行完宏任务后率先执行遇到过的微任务，微任务执行完后才执行下一个宏任务。
+
+**宏任务包含：**
+
+| #                       | 浏览器 | Node |
+| ----------------------- | ------ | ---- |
+| `I/O`                   | ✅      | ✅    |
+| `setTimeout`            | ✅      | ✅    |
+| `setInterval`           | ✅      | ✅    |
+| `setImmediate`          | ❌      | ✅    |
+| `requestAnimationFrame` | ✅      | ❌    |
+| script                  |        |      |
+| setTimeout              |        |      |
+
+**微任务包含：**
+
+| #                            | 浏览器 | Node |
+| ---------------------------- | ------ | ---- |
+| `process.nextTick`           | ❌      | ✅    |
+| `MutationObserver`           | ✅      | ❌    |
+| `Promise.then catch finally` | ✅      | ✅    |
+
+**小结：**宿主环境提供的方法是宏任务，js引擎自身提供的是微任务。
+
+![在这里插入图片描述](F:\专业\gitbook-blogs\pages\20190214101935414.jpg)
+
+![img](F:\专业\gitbook-blogs\pages\15fdcea13361a1ec~tplv-t2oaga2asx-watermark.awebp)
+
+### 总结
+
+
 
 ## 函数
 
@@ -965,6 +863,195 @@ Element.appendChild() // 向元素添加新的子节点，作为最后一个子�
 - 创建一个 `String` 的包装类型实例
 - 在实例上调用 `String对象` 方法
 - 销毁实例
+
+## 循环迭代
+
+> 把一个动作重复很多次（实际上重复的次数有可能为 0）。各种循环机制提供了不同的方法去确定循环的开始和结束。不同情况下，某一种类型循环会比其它的循环用起来更简单。
+
+- **for** 语句
+
+```js
+for (let i = 0; i < arr.length; i++) {
+    ...
+}
+```
+
+- **while** 语句
+
+```js
+let i = 0
+while (i < 10){
+    i++
+}
+console.log(i);
+```
+
+- **do...while** 语句
+
+```js
+let i = 0
+do {
+    i++
+} while (i > 5)
+console.log(i);
+```
+
+- **label** 语句
+
+> **标记语句**只能和 [`break`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Statements/break) 或 [`continue`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Statements/continue) 语句一起使用。标记就是在一条语句前面加个可以引用的标识符，从而清晰的表示接下来执行哪里的代码。
+>
+> 标记语句非常罕见，通常情况下，可以使用函数调用而不是（基于标记的）循环跳转。
+
+```js
+let str = ''
+
+loop1:
+for (let i = 0; i < 5; i++) {
+  if (i === 1) {
+    continue loop1
+  }
+  str = str + i
+}
+
+console.log(str);
+// expected output: "0234"
+```
+
+- **break** 语句
+
+> 用于终止当前循环，或者是链接到 **label** 语句。
+>
+> 注：**return** 语句是终止函数的执行，并返回一个指定的值给函数调用者。
+
+```js
+for (let i = 0; i < 3; i++) {
+    if (i == 1) break
+    console.log(i);
+}
+// 0
+```
+
+`js` 没有类似 `goto` 语句可以跳转到任意地方的语句，所以 `break` 语句必须内嵌在它引用的标签中。
+
+```js
+// break 内嵌在 loop2 中，loop2 内嵌在 loop1 中，这样是可以的
+// break loop1：满足条件时会终止外层循环
+// break loop2：满足条件时会终止内层循环
+let i = 0, j = 0
+loop1:while (i < 3){
+    loop2:while (j < 3){
+        if (i === 1 && j === 1) break loop1
+        console.log(i,j)
+        j++
+    }
+    i++
+    j = 0
+}
+```
+
+代码块外层不是循环或选择结构时，即为顺序结构时使用 `break` 必须附带使用 `label` 语句：
+
+```js
+// 跳转的外层不是循环或选择结构
+loop: {
+    console.log('1');
+    break loop
+    console.log(':-(');
+}
+```
+
+```js
+// 跳转的外层是循环结构
+let i = 0
+while (i<3){
+    {
+        console.log(i);
+        break
+        console.log(':-(');
+    }
+    i++
+}
+```
+
+- **continue** 语句
+
+> 用于跳过代码块的剩余部分并进入下一次循环，或者是链接到 **label** 语句。
+
+```js
+for (let i = 0; i < 3; i++) {
+    if (i == 1) continue
+    console.log(i);
+}
+// 0
+// 2
+```
+
+- **for...in** 语句
+
+> 利用关键字 **in** 以任意顺序遍历一个对象的除[Symbol](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol)以外的[可枚举](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Enumerability_and_ownership_of_properties)属性。
+
+```js
+// 用来迭代对象的属性名（包括它的原型链上的可枚举属性）
+// 不建议用来遍历数组，其key会是索引
+for (let key in obj) {
+    ...
+}
+```
+
+- **for...of** 语句
+
+> [可迭代对象](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Iteration_protocols) 包括 [`Array`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Array)，[`Map`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Map)，[`Set`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Set)，[`String`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/String)，[`TypedArray`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/TypedArray)，[arguments](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions_and_function_scope/arguments) 对象等等。
+
+```js
+// 用来遍历可迭代对象的属性值（不包括它的原型链上的可枚举属性）
+// 遍历obj会报错obj不可迭代
+for (let value of arr) {
+    ...
+}
+```
+
+- **tips:** **for...in** 与 **for...of** 的区别
+
+> 两者都是迭代一些东西，区别在于迭代方式不同:
+>
+> 前者以任意顺序迭代对象的可枚举属性（包含原型链）;
+>
+> 后者遍历可迭代对象定义要迭代的值（不包含原型链）。
+
+```js
+// 给构造函数 Object 和 Array 分别增加一个自定义属性
+Object.prototype.objCustom = function() {}
+Array.prototype.arrCustom = function() {}
+
+// 构造函数Object实例化，其原型链上有 objCustom 属性
+let obj = {
+    name: 'wife',
+    age: 18,
+    alive: true,
+    address: {
+        city: 'xg'
+    },
+    say: () => 'i love you'
+}
+// 构造函数Array实例化，其原型链上 arrCustom 和 objCustom 属性
+// 因为 Array 是 Object 的实例化继承到了 objCustom 属性
+let arr = [17, 18, 19, 20]
+arr.foo = 21
+arr.bar = obj
+
+console.log(arr);
+// 迭代arr的所有可枚举属性（包含原型链上的）
+for (let key in arr) {
+    // 当前的枚举属性是自身的（不是继承的，即不是原型链上的）返回true
+    if (arr.hasOwnProperty(key)) {  // 该方法继承于Object
+        console.log(arr[key]);
+    }
+}
+//
+for (let key of arr) {
+    console.log(key);  // 17 18 19 20
+}
+```
 
 ## 路径
 

@@ -1,24 +1,56 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta charset="utf-8">
 		<title></title>
 	</head>
 	<body>
+		<button type="button" id="button">点击</button>
+
+		<script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+		<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 		<script type="text/javascript">
-		debugger
-			let a = 1
-			alert(a)
-			setTimeout(() => {
-				alert(++a)
-			}, 1000)
-			a = 5
-			alert(a)
+			$(document).ready(function() {
+				$("button").click(function() {
+					init()
+				});
+			});
+
+			function init() {
+				debugger
+				console.log(1);
+				setTimeout(function() {
+					console.log(2);
+				}, 1000);
+				axios.get('http://39.107.221.146/api/homeslide')
+					.then(function(response) {
+						console.log(3);
+					})
+					.catch(function(error) {
+						console.log(4);
+					});
+				console.log(5);
+				new Promise(resolve => {
+				  resolve()
+				  console.log(6)
+				}).then(_ => {
+				  console.log(7)
+					new Promise(resolve => {
+					  resolve()
+					  console.log(8)
+					}).then(_ => {
+					  console.log(9)
+					})
+				})
+				axios.get('http://39.107.221.146/api/homenav')
+					.then(function(response) {
+						console.log(10);
+					})
+					.catch(function(error) {
+						console.log(11);
+					});
+				console.log(12);
+			}
 		</script>
 	</body>
 </html>
-https://juejin.cn/post/6844903512845860872#heading-10
-https://juejin.cn/post/6844903657264136200
-https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/EventLoop
-https://www.ruanyifeng.com/blog/2014/10/event-loop.html
