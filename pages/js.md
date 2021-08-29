@@ -75,7 +75,7 @@ JavaScript 运行时，除了一个正在运行的主线程，引擎还提供一
 2. 执行完同步任务（由js引擎的`监控进程`检测执行栈是否为空）后，如果任务队列中没有执行完的异步任务的 `回调函数`，则会去执行其他异步任务；如果任务队列中有执行完的异步任务的 `回调函数`，则让其进入主线程作为同步任务立即执行；
 3. 重复1、2过程执行没有任何任务，这就是 **事件循环**。
 
-![事件循环流程图](F:\专业\gitbook-blogs\pages\20190214094730128.jpg)
+![事件循环流程图](/.gitbook/assets/事件循环流程图.jpg)
 
 `回调函数` 是指会被主线程 `挂起来` 的代码，异步任务必须指定回调函数，主线程执行异步任务就是执行其对应的回调函数。
 
@@ -144,11 +144,109 @@ function init() {
 
 **小结：**宿主环境提供的方法是宏任务，js引擎自身提供的是微任务。
 
-![在这里插入图片描述](F:\专业\gitbook-blogs\pages\20190214101935414.jpg)
+![异步任务处理流程示意](/.gitbook/assets/异步任务处理流程示意.jpg)
 
 ![img](F:\专业\gitbook-blogs\pages\15fdcea13361a1ec~tplv-t2oaga2asx-watermark.awebp)
 
 ### 总结
+
+
+
+## 数据类型
+
+### 判断数据类型
+
+> 数据类型本质->构造器->对象
+
+- **typeof**（一元运算符）
+
+  判断原始类型，返回 `基本类型` 或 `Object` 或 `function` 字符串。
+
+   `typeof` 的返回值：
+
+  | 类型                                                         | 结果                                                         |
+  | :----------------------------------------------------------- | :----------------------------------------------------------- |
+  | [Undefined](https://developer.mozilla.org/zh-CN/docs/Glossary/undefined) | `"undefined"`                                                |
+  | [Null](https://developer.mozilla.org/zh-CN/docs/Glossary/Null) | `"object"` (原因见[MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/typeof#null)) |
+  | [Boolean](https://developer.mozilla.org/zh-CN/docs/Glossary/Boolean) | `"boolean"`                                                  |
+  | [Number](https://developer.mozilla.org/zh-CN/docs/Glossary/Number) | `"number"`                                                   |
+  | [BigInt](https://developer.mozilla.org/zh-CN/docs/Glossary/BigInt) | `"bigint"`                                                   |
+  | [String](https://developer.mozilla.org/zh-CN/docs/Glossary/String) | `"string"`                                                   |
+  | [Symbol](https://developer.mozilla.org/zh-CN/docs/Glossary/Symbol) | `"symbol"`                                                   |
+  | 宿主对象（由 JS 环境提供）                                   | *取决于具体实现*                                             |
+  | [Function](https://developer.mozilla.org/zh-CN/docs/Glossary/Function) 对象 | `"function"`                                                 |
+  | 其他任何对象                                                 | `"object"`                                                   |
+
+  ```js
+  typeof 1 // "number"
+  typeof(1) // "number"
+  typeof(() => 1) // "function"
+  typeof({a: 1}) // "object"
+  ```
+
+- **valueOf ( ) **
+
+  返回指定对象的原始值，一般由js自动调用，用于判断类型时需搭配 `typeof` 使用。
+
+  不同类型对象的 `valueOf()` 方法的返回值：
+
+  | **对象** | **返回值**                                               |
+  | :------- | :------------------------------------------------------- |
+  | Array    | 返回数组对象本身。                                       |
+  | Boolean  | 布尔值。                                                 |
+  | Date     | 存储的时间是从 1970 年 1 月 1 日午夜开始计的毫秒数 UTC。 |
+  | Function | 函数本身。                                               |
+  | Number   | 数字值。                                                 |
+  | Object   | 对象本身。这是默认情况。                                 |
+  | String   | 字符串值。                                               |
+  |          | Math 和 Error 对象没有 valueOf 方法。                    |
+
+  ```js
+  let str = new String('12345')
+  
+  typeof(str) // "object"
+  str instanceof Object // true
+  str instanceof String // true
+  Object.prototype.toString.call(str) // "[object String]"
+  
+  str.valueOf() // "12345"
+  typeof str.valueOf() // "string"
+  ```
+
+- **instanceof**（关系运算符）
+
+  检测  `constructor.prototype ` 是否存在于参数的原型链上，即某个实例对象是否是某个构造函数的实例，返回 `true` 和 `false`。
+
+  ```js
+  let obj = new Object()
+  obj instanceof Object // true
+  ```
+
+  **tips:** 在目前的ES规范中，只能读取对象的原型而不能改变它，但借助于非标准的 `__proto__` 伪属性，是可以实现的。比如执行 `obj.__proto__ = null` 之后，`obj instanceof Object` 就会返回 `false` 了。
+
+- **Object.prototype.toString.call( ) **
+
+  判断最具体的数据类型，返回 "[object *type*]"，其中 `type` 是对象的类型。
+
+  ```js
+  Object.prototype.toString.call(‘12345’) // [object String]
+  Object.prototype.toString.call(new Date) // [object Date]
+  
+  '[object String]'.slice(8, -1) // "String"
+  ```
+
+- **Array.isArray()** 和 **isNaN() **
+
+  判断对象是否为数组。
+
+  ```js
+  // 是不是数组
+  Array.isArray([1]) // true
+  // 是不是数值
+  isNaN('asd')
+  ```
+
+### 转换数据类型
 
 
 
@@ -527,6 +625,8 @@ let和const声明的变量在存放于 `当前上下文环境 中（非栈底，
 > **实例化对象** 通过 **__ proto __** 或 **Object.getPrototypeOf(obj)** 访问原型；
 >
 > **原型** 通过 **constructor** 指向构造函数。
+
+**tips:** 在目前的ES规范中，只能读取对象的原型而不能改变它，但借助于非标准的 `__proto__` 伪属性，是可以实现的。比如执行 `obj.__proto__ = null` 之后，`obj instanceof Object` 就会返回 `false` 了。
 
 1. **字面量**
 
