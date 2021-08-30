@@ -154,101 +154,341 @@ function init() {
 
 ## 数据类型
 
+### 数据类型种类
+
+> [MDN: JavaScript 数据类型](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Data_structures)
+
+#### 基本类型
+
+> 非对象、无方法的数据称为基本类型。
+
+包含7种：[string](https://developer.mozilla.org/zh-CN/docs/Glossary/String)，[number](https://developer.mozilla.org/zh-CN/docs/Glossary/Number)，[bigint](https://developer.mozilla.org/zh-CN/docs/Glossary/BigInt)，[boolean](https://developer.mozilla.org/zh-CN/docs/Glossary/Boolean)，[null](https://developer.mozilla.org/zh-CN/docs/Glossary/Null)，[undefined](https://developer.mozilla.org/zh-CN/docs/Glossary/undefined)，[symbol](https://developer.mozilla.org/zh-CN/docs/Glossary/Symbol) 。
+
+**1. string**
+
+表示文本数据。字符串的长度是它的元素的数量，中英文都是占一个字符。第一个元素的索引为 0。
+
+**2. number**
+
+基于 `IEEE 754`  标准的双精度64位二进制格式的值 `-(2^53 -1) ~ 2^53 -1`，超出范围数值不再安全（失真）。 
+
+**3. bigint**
+
+表示任意精度的整数，可以超过数字的安全整数限制，**`Number.MAX_SAFE_INTEGER`** 常量表示在 JavaScript 中最大的安全整数（`2^53 -1`）。
+
+BigInt是通过在整数末尾附加 `n `或调用构造函数来创建的。
+
+```js
+let x = 2n ** 53n
+x // 9007199254740992n
+typeof x // "bigint"
+```
+
+**4. boolean**
+
+只有两个值：`true` 和 `false`。
+
+**5. null**
+
+表示变量未指向任何对象，可以理解成尚未创建的对象。
+
+当一个对象被赋值了 `null ` 以后，原来的对象在内存中就处于游离状态，`垃圾回收机制` 会择机回收该对象并释放内存。
+
+`typeof null` 结果为 `"object"`，是因为 JavaScript 数据类型在底层都是以二进制的形式表示的，二进制的前三位为 0 会被 typeof 判断为对象类型，而 null 的二进制位恰好都是 0 ，因此，null 被误判断为 Object 类型；`Object.prototype.toString.call(null)` 结果为 `"[object Null]"`，Null 才是它的实际类型。
+
+典型用法：
+
+- 作为函数的参数，表示该函数的参数不是对象。
+
+- 作为对象原型链的终点。
+
+**6. undefined**
+
+一个没有被赋值的变量会有个默认值 `undefined`，来源于预解析时的初始化，null 不等同于 undefined。
+
+典型用法：
+
+- 变量被声明了，但没有赋值时，就等于undefined。
+
+- 调用函数时，应该提供的参数没有提供，该参数等于undefined。
+
+- 对象没有赋值的属性，该属性的值为undefined。
+
+- 函数没有返回值时，默认返回undefined。
+
+**7. symbol**
+
+`Symbol()` 函数会返回 symbol 类型的值，该类型具有静态属性和静态方法。但作为构造函数来说它并不完整，因为它不支持语法： `new Symbol()`。
+
+每个从`Symbol()`返回的symbol值都是唯一的。一个symbol值能作为对象属性的标识符，这是该数据类型仅有的目的。
+
+```js
+let key = Symbol()
+this[key] = function() {...}
+```
+
+当一个 symbol 类型的值在属性赋值语句中被用作标识符时，该属性（像上述代码块中 symbol ）是匿名的；并且是不可枚举的。
+
+symbol特性：
+
+- 唯一性。
+- 不可枚举，不会在循环结构 `for(... in ...)` 中作为成员出现。
+- 匿名，不会出现在 `Object.getOwnPropertyNames()` 的返回数组里。
+
+#### 基本类型包装对象
+
+除了 `null` 和 `undefined` 之外，所有基本类型都有其对应的包装对象，其本质是 `特殊的引用类型`。
+
+可通过 [`valueOf()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/valueOf) 方法返回基本类型值。
+
+注意包装类型和原始类型的区别：
+
+```js
+true === new Boolean(true) // false
+
+123 === new Number(123) // false
+
+'ConardLi' === new String('ConardLi') // false
+typeof 'ConardLi' // "string"
+typeof new String('ConardLi') // "object"
+typeof new String('ConardLi').valueOf() // "string"
+
+Object.prototype.toString.call('ConardLi') // "[object String]"
+```
+
+#### 引用类型
+
+> 指内存中的可以被 [标识符](https://developer.mozilla.org/zh-CN/docs/Glossary/Identifier) 引用的一块区域。
+
+包含且不限于：Object，Array，Map，Set，Date，RegExp。
+
 ### 判断数据类型
 
 > 数据类型本质->构造器->对象
 
-- **typeof**（一元运算符）
+**1.typeof（一元运算符）**
 
-  判断原始类型，返回 `基本类型` 或 `Object` 或 `function` 字符串。
+判断原始类型，返回 `基本类型` 或 `Object` 或 `function` 字符串。
 
-   `typeof` 的返回值：
+ `typeof` 的返回值：
 
-  | 类型                                                         | 结果                                                         |
-  | :----------------------------------------------------------- | :----------------------------------------------------------- |
-  | [Undefined](https://developer.mozilla.org/zh-CN/docs/Glossary/undefined) | `"undefined"`                                                |
-  | [Null](https://developer.mozilla.org/zh-CN/docs/Glossary/Null) | `"object"` (原因见[MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/typeof#null)) |
-  | [Boolean](https://developer.mozilla.org/zh-CN/docs/Glossary/Boolean) | `"boolean"`                                                  |
-  | [Number](https://developer.mozilla.org/zh-CN/docs/Glossary/Number) | `"number"`                                                   |
-  | [BigInt](https://developer.mozilla.org/zh-CN/docs/Glossary/BigInt) | `"bigint"`                                                   |
-  | [String](https://developer.mozilla.org/zh-CN/docs/Glossary/String) | `"string"`                                                   |
-  | [Symbol](https://developer.mozilla.org/zh-CN/docs/Glossary/Symbol) | `"symbol"`                                                   |
-  | 宿主对象（由 JS 环境提供）                                   | *取决于具体实现*                                             |
-  | [Function](https://developer.mozilla.org/zh-CN/docs/Glossary/Function) 对象 | `"function"`                                                 |
-  | 其他任何对象                                                 | `"object"`                                                   |
+| 类型                                                         | 结果                                                         |
+| :----------------------------------------------------------- | :----------------------------------------------------------- |
+| [Undefined](https://developer.mozilla.org/zh-CN/docs/Glossary/undefined) | `"undefined"`                                                |
+| [Null](https://developer.mozilla.org/zh-CN/docs/Glossary/Null) | `"object"` (原因见[MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/typeof#null)) |
+| [Boolean](https://developer.mozilla.org/zh-CN/docs/Glossary/Boolean) | `"boolean"`                                                  |
+| [Number](https://developer.mozilla.org/zh-CN/docs/Glossary/Number) | `"number"`                                                   |
+| [BigInt](https://developer.mozilla.org/zh-CN/docs/Glossary/BigInt) | `"bigint"`                                                   |
+| [String](https://developer.mozilla.org/zh-CN/docs/Glossary/String) | `"string"`                                                   |
+| [Symbol](https://developer.mozilla.org/zh-CN/docs/Glossary/Symbol) | `"symbol"`                                                   |
+| 宿主对象（由 JS 环境提供）                                   | *取决于具体实现*                                             |
+| [Function](https://developer.mozilla.org/zh-CN/docs/Glossary/Function) 对象 | `"function"`                                                 |
+| 其他任何对象                                                 | `"object"`                                                   |
 
-  ```js
-  typeof 1 // "number"
-  typeof(1) // "number"
-  typeof(() => 1) // "function"
-  typeof({a: 1}) // "object"
-  ```
+```js
+typeof 1 // "number"
+typeof(1) // "number"
+typeof(() => 1) // "function"
+typeof({a: 1}) // "object"
+```
 
-- **valueOf ( ) **
+**2. valueOf ( ) **
 
-  返回指定对象的原始值，一般由js自动调用，用于判断类型时需搭配 `typeof` 使用。
+返回指定对象的原始值，一般由js自动调用，用于判断类型时需搭配 `typeof` 使用。
 
-  不同类型对象的 `valueOf()` 方法的返回值：
+不同类型对象的 `valueOf()` 方法的返回值：
 
-  | **对象** | **返回值**                                               |
-  | :------- | :------------------------------------------------------- |
-  | Array    | 返回数组对象本身。                                       |
-  | Boolean  | 布尔值。                                                 |
-  | Date     | 存储的时间是从 1970 年 1 月 1 日午夜开始计的毫秒数 UTC。 |
-  | Function | 函数本身。                                               |
-  | Number   | 数字值。                                                 |
-  | Object   | 对象本身。这是默认情况。                                 |
-  | String   | 字符串值。                                               |
-  |          | Math 和 Error 对象没有 valueOf 方法。                    |
+| **对象** | **返回值**                                               |
+| :------- | :------------------------------------------------------- |
+| Array    | 返回数组对象本身。                                       |
+| Boolean  | 布尔值。                                                 |
+| Date     | 存储的时间是从 1970 年 1 月 1 日午夜开始计的毫秒数 UTC。 |
+| Function | 函数本身。                                               |
+| Number   | 数字值。                                                 |
+| Object   | 对象本身。这是默认情况。                                 |
+| String   | 字符串值。                                               |
+|          | Math 和 Error 对象没有 valueOf 方法。                    |
 
-  ```js
-  let str = new String('12345')
-  
-  typeof(str) // "object"
-  str instanceof Object // true
-  str instanceof String // true
-  Object.prototype.toString.call(str) // "[object String]"
-  
-  str.valueOf() // "12345"
-  typeof str.valueOf() // "string"
-  ```
+```js
+let str = new String('12345')
 
-- **instanceof**（关系运算符）
+typeof(str) // "object"
+str instanceof Object // true
+str instanceof String // true
+Object.prototype.toString.call(str) // "[object String]"
 
-  检测  `constructor.prototype ` 是否存在于参数的原型链上，即某个实例对象是否是某个构造函数的实例，返回 `true` 和 `false`。
+str.valueOf() // "12345"
+typeof str.valueOf() // "string"
+```
 
-  ```js
-  let obj = new Object()
-  obj instanceof Object // true
-  ```
+**3. instanceof（关系运算符）**
 
-  **tips:** 在目前的ES规范中，只能读取对象的原型而不能改变它，但借助于非标准的 `__proto__` 伪属性，是可以实现的。比如执行 `obj.__proto__ = null` 之后，`obj instanceof Object` 就会返回 `false` 了。
+检测  `constructor.prototype ` 是否存在于参数的原型链上，即某个实例对象是否是某个构造函数的实例，返回 `true` 和 `false`。
 
-- **Object.prototype.toString.call( ) **
+```js
+let obj = new Object()
+obj instanceof Object // true
+```
 
-  判断最具体的数据类型，返回 "[object *type*]"，其中 `type` 是对象的类型。
+**tips:** 在目前的ES规范中，只能读取对象的原型而不能改变它，但借助于非标准的 `__proto__` 伪属性，是可以实现的。比如执行 `obj.__proto__ = null` 之后，`obj instanceof Object` 就会返回 `false` 了。
 
-  ```js
-  Object.prototype.toString.call(‘12345’) // [object String]
-  Object.prototype.toString.call(new Date) // [object Date]
-  
-  '[object String]'.slice(8, -1) // "String"
-  ```
+**4. Object.prototype.toString.call( ) **
 
-- **Array.isArray()** 和 **isNaN() **
+判断最具体的数据类型，返回 "[object *type*]"，其中 `type` 是对象的类型。
 
-  判断对象是否为数组。
+```js
+Object.prototype.toString.call(‘12345’) // [object String]
+Object.prototype.toString.call(new Date) // [object Date]
 
-  ```js
-  // 是不是数组
-  Array.isArray([1]) // true
-  // 是不是数值
-  isNaN('asd')
-  ```
+'[object String]'.slice(8, -1) // "String"
+```
+
+**5. Array.isArray() 和 isNaN() **
+
+判断对象是否为数组。
+
+```js
+// 是不是数组
+Array.isArray([1]) // true
+// 是不是数值
+isNaN('asd')
+```
 
 ### 转换数据类型
 
+> 数据类型本质->构造器->对象
 
+- typeof：（一元运算符）判断原始类型，返回 **基本类型** 或 **Object**。
+- instanceof：（关系运算符）判断该对象是否是某个构造函数（数据类型）的实例。
+- Object.prototype.toString.call( ) ：判断 **Object** 具体的数据类型。
+- valueOf ( ) ：返回对象的原始值。
+
+- Array.isArray()
+
+## 转换数据类型
+
+> 强制转换、自动转换
+
+#### 强制转换(通过构造函数转换)
+
+>  强制转换主要指使用`Number`、`String`和`Boolean`三个构造函数，手动将各种类型的值，转换成数字、字符串或者布尔值。 
+
+1. Number()
+
+   1.1. 基本类型的转换规则
+
+   - 构造函数 `Number()`
+
+     ```js
+     Number('a') -> NaN
+     Number(null) -> 0
+     Number(undefined) -> NaN
+     ```
+
+    - 使用一元加法运算符
+
+      ```js
+      '1.10' * 1 -> 1.1
+      +'1.1' -> 1.1
+      1+ +'2' -> 3(两个加号用空格隔开或小括号括起来)
+      1+ +'2'+3 -> 6
+      1+ +'2'+3+'4' -> '64'(有字符串时会被转成字符串)
+      1+ +'2'+3+ +'4' -> 10
+      1+ +'2'+3+'4'+'5' -> '645'
+      1+ +'2'+3+'4'+ +'5' -> '645'
+      ```
+
+    - 方法 `parseInt(string, radix)` 只能返回整数，会丢失小数部分。
+
+    - 方法 `parseFloat(string)` 会返回浮点数。
+
+   1.2. 对象的转换规则
+
+   - `Numbe()`方法的参数是对象时，将返回`NaN`，除非是包含单个数值的数组。 
+
+     ```js
+     Number({a: 1}) -> NaN
+     Number([1, 2, 3]) -> NaN
+     Number([5]) -> 5
+     ```
+
+2. String()
+
+   - 构造函数 `String(x)`
+     - 基本类型转换的都是字符串
+     - 参数如果是对象，返回一个类型字符串；如果是数组，返回该数组的字符串形式。 
+    - 方法 `x.toString()`
+    - +拼接，' '+x
+
+3. Boolean()
+
+   - 构造函数 `Boolean()` 显式
+
+     除了以下六个值的转换结果为`false`，其他的值全部为`true`。
+
+     - `undefined`
+     - `null`
+     - `-0` `0` `+0`
+     - `NaN`
+     - `''`（空字符串）
+
+    - 表达式! 或 !! 隐式
+
+#### 自动转换
+
+> 自动转换是以强制转换为基础的。
+>
+> 遇到以下三种情况时，JavaScript会自动转换数据类型，即转换是自动完成的，对用户不可见。
+
+```js
+// 1. 不同类型的数据互相运算
+123 + 'abc' // "123abc"
+
+// 2. 对非布尔值类型的数据求布尔值
+if ('abc') {
+  console.log('hello')
+}  // "hello"
+
+// 3. 对非数值类型的数据使用一元运算符（即“+”和“-”）
++ {foo: 'bar'} // NaN
+- [1, 2, 3] // NaN
+```
+
+> 自动转换规则：预期什么类型的值，就调用该类型的转换函数。比如，某个位置(运算符两侧)预期为字符串，就调用String函数进行转换。如果该位置即可以是字符串，也可能是数值，那么默认转为数值。
+
+1. 自动转比尔值
+
+   >  当JavaScript遇到预期为布尔值的地方（比如`if`语句的条件部分），就会将非布尔值的参数自动转换为布尔值。系统内部会自动调用`Boolean`函数。 
+
+    除了以下六个值，其他都是自动转为`true`。
+
+    - `undefined`
+    - `null`
+    - `-0`
+    - `0`或`+0`
+    - `NaN`
+    - `''`（空字符串）
+
+2. 自动转字符串
+
+   >  字符串的自动转换，主要发生在加法运算时。当一个值为字符串，另一个值为非字符串，则后者转为字符串。 
+
+3. 自动转数值
+
+   >  除了加法运算符有可能把运算子转为字符串，其他运算符都会把运算子自动转成数值。 
+
+```
+var obj={a:1,b:'2'}
+console.dir('输出：'+obj)  // 输出：[object Object]
+
+问：js中输出一个object对象显示的是[object Object]是什么意思？
+
+网友答：object的prototype链中都没有实现自己的baitoString()的话, 把object转换为String时就会调用Object.prototype.toString, 输出的格式是[object 对象的类型]。
+
+解：字符串拼接对象出现这种情况，实则就是数据类型转换问题。将 obj 对象利用 JSON.stringify() 转成字符串即可。
+var obj={a:1,b:'2'}
+console.dir('输出：'+JSON.stringify(obj))  // 输出：{"a":1,"b":"2"}
+```
 
 ## 函数
 
@@ -1312,3 +1552,30 @@ console.log(object1.property1);
 | 继承的可枚举属性   | true | true      | false                | false                      | false         | false                        |
 | 继承的不可枚举属性 | true | false     | false                | false                      | false         | false                        |
 | 继承的 Symbol 键   | true | false     | false                | false                      | false         | false                        |
+
+### 对象的属性
+
+> ECMAScript 定义的对象中有两种属性：数据属性和访问器属性。
+
+**1. 数据属性**
+
+数据属性是键值对，并且每个数据属性拥有下列特性:
+
+| 特性             | 数据类型           | 描述                                                         | 默认值    |
+| :--------------- | :----------------- | :----------------------------------------------------------- | :-------- |
+| [[Value]]        | 任何Javascript类型 | 包含这个属性的数据值。                                       | undefined |
+| [[Writable]]     | Boolean            | 如果该值为 `false，`则该属性的 [[Value]] 特性 不能被改变。   | false     |
+| [[Enumerable]]   | Boolean            | 如果该值为 `true，`则该属性可以用 [for...in](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in) 循环来枚举。 | false     |
+| [[Configurable]] | Boolean            | 如果该值为 `false，`则该属性不能被删除，并且 除了 [[Value]] 和 [[Writable]] 以外的特性都不能被改变。 | false     |
+
+**2. 访问器属性**
+
+访问器属性有一个或两个访问器函数 (get 和 set) 来存取数值，并且有以下特性:
+
+| 特性             | 类型                   | 描述                                                         | 默认值    |
+| :--------------- | :--------------------- | :----------------------------------------------------------- | :-------- |
+| [[Get]]          | 函数对象或者 undefined | 该函数使用一个空的参数列表，能够在有权访问的情况下读取属性值。另见 `get。` | undefined |
+| [[Set]]          | 函数对象或者 undefined | 该函数有一个参数，用来写入属性值，另见 `set。`               | undefined |
+| [[Enumerable]]   | Boolean                | 如果该值为 `true，则该属性可以用` [for...in](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in) 循环来枚举。 | false     |
+| [[Configurable]] | Boolean                | 如果该值为 `false，则该属性不能被删除，并且不能被转变成一个数据属性。` | false     |
+
