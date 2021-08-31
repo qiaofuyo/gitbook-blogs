@@ -120,7 +120,8 @@ function init() {
 > 异步任务分为 `宏任务` 和 `微任务`。
 
 1. 首先 `script标签` 是一个宏任务，在当前宏任务执行完之前是不会执行下一个宏任务；
-2. 在执行宏任务过程中遇到微任务时略过，执行完宏任务后率先执行遇到过的微任务，微任务执行完后才执行下一个宏任务。
+2. 在执行宏任务过程中遇到微任务时先略过，执行完宏任务后率先执行遇到过的微任务，微任务执行完后才执行下一个宏任务;
+3. 执行微任务时遇到微任务，会执行完当前微任务后去执行遇到的微任务；遇到宏任务，会把宏任务放进任务队列列尾。
 
 **宏任务包含：**
 
@@ -237,11 +238,17 @@ symbol特性：
 
 #### 基本类型包装对象
 
-除了 `null` 和 `undefined` 之外，所有基本类型都有其对应的包装对象，其本质是 `特殊的引用类型`。
+除了 `null` 和 `undefined` 之外，所有基本类型都有其对应的包装对象，其本质是 `特殊的引用类型`，可通过 [`valueOf()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/valueOf) 方法返回基本类型值。
 
-可通过 [`valueOf()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/valueOf) 方法返回基本类型值。
+当 `基本类型` 需要调用一个该类型的 `对象方法` 时（基本类型是没有方法的），JavaScript 会自动将基本类型转换成包装对象，并且调用相应的方法。实际上发生了下面的过程：
 
-注意包装类型和原始类型的区别：
+1. 创建一个该 `基本类型` 的包装对象实例；
+
+2. 在实例上调用该类型对象方法；
+
+3. 销毁实例。
+
+注意包装类型和基本类型的区别：
 
 ```js
 true === new Boolean(true) // false
@@ -330,7 +337,7 @@ let obj = new Object()
 obj instanceof Object // true
 ```
 
-**tips:** 在目前的ES规范中，只能读取对象的原型而不能改变它，但借助于非标准的 `__proto__` 伪属性，是可以实现的。比如执行 `obj.__proto__ = null` 之后，`obj instanceof Object` 就会返回 `false` 了。
+**Tips:** 在目前的ES规范中，只能读取对象的原型而不能改变它，但借助于非标准的 `__proto__` 伪属性，是可以实现的。比如执行 `obj.__proto__ = null` 之后，`obj instanceof Object` 就会返回 `false` 了。
 
 **4. Object.prototype.toString.call( ) **
 
@@ -356,130 +363,193 @@ isNaN('asd')
 
 ### 转换数据类型
 
-> 数据类型本质->构造器->对象
+> 分为：显式转换、隐式转换。在编译器自动赋值时,会发生*隐式转换*，但在代码中，也可以用一些写法强制要求进行*显式转换*。
 
-- typeof：（一元运算符）判断原始类型，返回 **基本类型** 或 **Object**。
-- instanceof：（关系运算符）判断该对象是否是某个构造函数（数据类型）的实例。
-- Object.prototype.toString.call( ) ：判断 **Object** 具体的数据类型。
-- valueOf ( ) ：返回对象的原始值。
+#### 显式转换
 
-- Array.isArray()
+>  显式转换指手动将各种类型的值，转换成数字、字符串、布尔值。 
 
-## 转换数据类型
+**1. 转数字类型**
 
-> 强制转换、自动转换
+- 使用构造函数 `Number()`
 
-#### 强制转换(通过构造函数转换)
+```js
+Number('a') // NaN
 
->  强制转换主要指使用`Number`、`String`和`Boolean`三个构造函数，手动将各种类型的值，转换成数字、字符串或者布尔值。 
+Number(true) // 1
+Number(false) // 0
 
-1. Number()
+Number(null) // 0
+Number(undefined) // NaN
 
-   1.1. 基本类型的转换规则
+// 参数是引用类型时，将返回`NaN`，除非是包含单个数值的数组
+Number({a: 1}) // NaN
+Number([1, 2, 3]) // NaN
+Number([1]) // 1
+```
 
-   - 构造函数 `Number()`
+ - 使用一元加法运算符
 
-     ```js
-     Number('a') -> NaN
-     Number(null) -> 0
-     Number(undefined) -> NaN
-     ```
+```js
+'1.10' * 1 // 1.1
++'1.10' // 1.1
 
-    - 使用一元加法运算符
+1+ +'2' // 3 (两个加号必须用用空格隔开 或 +'2'用小括号括起来)
+1+(+'2')+3 // 6
+1+(+'2.0')+3 // 6
 
-      ```js
-      '1.10' * 1 -> 1.1
-      +'1.1' -> 1.1
-      1+ +'2' -> 3(两个加号用空格隔开或小括号括起来)
-      1+ +'2'+3 -> 6
-      1+ +'2'+3+'4' -> '64'(有字符串时会被转成字符串)
-      1+ +'2'+3+ +'4' -> 10
-      1+ +'2'+3+'4'+'5' -> '645'
-      1+ +'2'+3+'4'+ +'5' -> '645'
-      ```
+1+(+'2')+3+'4' // '64'(表达式中字符串没先转数字时，其结果会是个字符串)
+1+(+'2')+3+(+'4') // 10
 
-    - 方法 `parseInt(string, radix)` 只能返回整数，会丢失小数部分。
+// 参数是引用类型时，则会进行拼接成字符串
+1 + {a: 1} // "1[object Object]"
+1 + [1, 2, 3] // "11,2,3"
+1 + [1] // "11"
+```
 
-    - 方法 `parseFloat(string)` 会返回浮点数。
+ - 使用方法 `parseInt(string, radix)`
 
-   1.2. 对象的转换规则
+```js
+// 只能返回整数，会丢失小数部分
+parseInt('100', 10) // 100
+parseInt('100', 2) // 4
+```
 
-   - `Numbe()`方法的参数是对象时，将返回`NaN`，除非是包含单个数值的数组。 
+**Tips:** 在字符串以"0"为开始时旧的浏览器默认使用八进制基数；ECMAScript 5，默认的是十进制的基数。使用时最好带上进制(radix) 参数，用于指定使用哪一种进制。
 
-     ```js
-     Number({a: 1}) -> NaN
-     Number([1, 2, 3]) -> NaN
-     Number([5]) -> 5
-     ```
+ - 使用方法 `parseFloat(string)`
 
-2. String()
+```js
+// 会返回浮点数，不会丢失小数部分
+parseFloat('100.10') // 100.1
+parseFloat('100.01') // 100.01
+```
 
-   - 构造函数 `String(x)`
-     - 基本类型转换的都是字符串
-     - 参数如果是对象，返回一个类型字符串；如果是数组，返回该数组的字符串形式。 
-    - 方法 `x.toString()`
-    - +拼接，' '+x
+**2. 转字符串类型**
 
-3. Boolean()
+- 使用构造函数 `String(x)`
 
-   - 构造函数 `Boolean()` 显式
+```js
+// 基本类型转换结果都是字符串
+String(1) // "1"
 
-     除了以下六个值的转换结果为`false`，其他的值全部为`true`。
+String(true) // "true"
+String(false) // "false"
 
-     - `undefined`
-     - `null`
-     - `-0` `0` `+0`
-     - `NaN`
-     - `''`（空字符串）
+String(null) // "null"
+String(undefined) // "undefined"
 
-    - 表达式! 或 !! 隐式
+// 参数是引用类型时
+String({a: 1}) // "[object Object]"
+String([1, 2, 3]) // "1,2,3"
+String([1]) // "1"
+```
 
-#### 自动转换
+- 使用一元加法运算符
 
-> 自动转换是以强制转换为基础的。
->
-> 遇到以下三种情况时，JavaScript会自动转换数据类型，即转换是自动完成的，对用户不可见。
+```js
+// 都会 拼接 成字符串
+'1' + 1 // "11"
+
+'1' + true // "1true"
+'1' + false // "1false"
+
+'1' + null // "1null"
+'1' + undefined // "1undefined"
+
+'1' + {a: 1} // "1[object Object]"
+'1' + [1, 2, 3] // "11,2,3"
+'1' + [1] // "11"
+```
+
+- 使用方法 `string.toString()`
+
+```js
+let a = 1
+a.toString() // "1"
+
+true.toString() // "true"
+```
+
+**3. 转布尔类型**
+
+- 使用构造函数 `Boolean()`
+
+```js
+// 除了以下五个值的转换结果为 false，其他的值全部为 true
+Boolean(null)
+Boolean(undefined)
+Boolean(0) // +0 和 -0 转换结果也是false
+Boolean(NaN)
+Boolean('') // 空字符串
+```
+
+ - 使用逻辑非 (!) 运算符
+
+```js
+!0 // true
+!1 // false
+
+!true // false
+!false // true
+
+!null // true
+!undefined // true
+
+!{a: 1} // false
+![] // false
+```
+
+#### 隐式转换
+
+> 显式转换是隐式转换的基础。
+
+遇到以下三种情况时，JavaScript编译器会自动转换数据类型：
 
 ```js
 // 1. 不同类型的数据互相运算
 123 + 'abc' // "123abc"
 
-// 2. 对非布尔值类型的数据求布尔值
-if ('abc') {
-  console.log('hello')
-}  // "hello"
+// 2. 对非布尔类型的数据求布尔值
+if ('abc') { // true
+  ...
+}
 
-// 3. 对非数值类型的数据使用一元运算符（即“+”和“-”）
-+ {foo: 'bar'} // NaN
-- [1, 2, 3] // NaN
+// 3. 对非数字类型的数据使用一元运算符（即“+”和“-”）
++{a: 1} // NaN
++'1' // 1
 ```
 
-> 自动转换规则：预期什么类型的值，就调用该类型的转换函数。比如，某个位置(运算符两侧)预期为字符串，就调用String函数进行转换。如果该位置即可以是字符串，也可能是数值，那么默认转为数值。
+**隐式转换规则：** 某个位置预期什么类型的值，就调用该类型的 `构造函数` 进行转换。比如，运算符两侧预期为字符串，就调用构造函数 `String()` 进行转换；如果该位置既可以是字符串，也可能是数字，那么默认转换为数字。
 
-1. 自动转比尔值
+**1. 自动转数字类型**
 
-   >  当JavaScript遇到预期为布尔值的地方（比如`if`语句的条件部分），就会将非布尔值的参数自动转换为布尔值。系统内部会自动调用`Boolean`函数。 
+除了 `一元加法` 运算符有可能把运算子转换为字符串，其他运算符都会把运算子转换成数值。
 
-    除了以下六个值，其他都是自动转为`true`。
+**2. 自动转字符串类型**
 
-    - `undefined`
-    - `null`
-    - `-0`
-    - `0`或`+0`
-    - `NaN`
-    - `''`（空字符串）
+字符串的自动转换，主要发生在加法运算时。当一个值为字符串，另一个值为非字符串，则后者转为字符串。
 
-2. 自动转字符串
+**3. 自动转布尔类型**
 
-   >  字符串的自动转换，主要发生在加法运算时。当一个值为字符串，另一个值为非字符串，则后者转为字符串。 
+比如 `if语句` 的条件部分预期布尔类型，编译器会自动调用构造函数 `Boolean()` 进行转换。
 
-3. 自动转数值
+ 除了以下六个值，其他都是自动转为`true`。
 
-   >  除了加法运算符有可能把运算子转为字符串，其他运算符都会把运算子自动转成数值。 
+```js
+// 除了以下五个值的转换结果为 false，其他的值全部为 true
+Boolean(null)
+Boolean(undefined)
+Boolean(0) // +0 和 -0 转换结果也是false
+Boolean(NaN)
+Boolean('') // 空字符串
+```
+
+**Note:**
 
 ```
 var obj={a:1,b:'2'}
-console.dir('输出：'+obj)  // 输出：[object Object]
+console.dir('输出：'+obj)  // [object Object]
 
 问：js中输出一个object对象显示的是[object Object]是什么意思？
 
@@ -487,65 +557,65 @@ console.dir('输出：'+obj)  // 输出：[object Object]
 
 解：字符串拼接对象出现这种情况，实则就是数据类型转换问题。将 obj 对象利用 JSON.stringify() 转成字符串即可。
 var obj={a:1,b:'2'}
-console.dir('输出：'+JSON.stringify(obj))  // 输出：{"a":1,"b":"2"}
+console.dir('输出：'+JSON.stringify(obj))  // {"a":1,"b":"2"}
 ```
 
 ## 函数
 
 ### 创建函数的四种方法
 
-1. 函数声明
+**1. 函数声明**
 
-   > 使用 **function** 关键字声明函数。
+> 使用 **function** 关键字声明函数。
 
-   ```js
-   function named() {
-   	return '声明一个函数'
-   }
-   ```
+```js
+function named() {
+	return '声明一个函数'
+}
+```
 
-2. 函数表达式（字面量）
+**2. 函数表达式（字面量）**
 
-   ```js
-   let fun1 = function() {
-       return '这是一个匿名函数'
-   }
-   let fun2 = function named() {
-       return '这是一个命名函数'
-   }
-   ```
+```js
+let fun1 = function() {
+    return '这是一个匿名函数'
+}
+let fun2 = function named() {
+    return '这是一个命名函数'
+}
+```
 
-   **命名函数** 的函数名只在该函数体内部有效，函数体外部无效。这样做的好处有两个，一是可以在函数体内部调用自身，二是调试时观测堆栈将显示函数名而不是一个匿名。
+`命名函数` 的函数名只在该函数体内部有效，函数体外部无效。这样做的好处有两个，一是可以在函数体内部调用自身，二是调试时观测堆栈将显示函数名而不是一个匿名。
 
-3. new Function()
+**3. new Function()**
 
-   > **Function()** 是内置的构造函数，创建一个新的函数对象，但它只能在全局作用域中运行。
+> `Function()` 是内置的构造函数，创建一个新的函数对象，但它只能在全局作用域中运行。
 
-   可以传递任意数量的参数给Function构造函数，但只有最后一个参数会被当做函数体，如果只有一个参数，该参数就是函数体。
-   
-   ```js
-   const sum = new Function('a', 'b', 'return a + b');  // 可以不要new
-   console.log(sum(2, 6));  // 8
-   ```
-   
-4. 自定义构造函数
+可以传递任意数量的参数给Function构造函数，但只有最后一个参数会被当做函数体，如果只有一个参数，该参数就是函数体。
 
-   > 为什么要使用构造函数？因为可以批量创建函数。
-   >
-   > 为什么要使用this？因为每次调用构造函数都是新建一个对象，this用来指向新创建的对象 。
+```js
+const sum = new Function('a', 'b', 'return a + b');  // 可以不要new
+console.log(sum(2, 6));  // 8
+```
 
-   ```js
-   // 这实则创建对象
-   function CreateFunction(name, age, alive, sayHi) {
-   	this.name = name
-   	this.age = age
-   	this.alive = alive
-   	this.sayHi = sayHi
-   }
-   let fun = new CreateFunction('wife', 20, true, function() {  // 必须要new
-       return 'i love you'
-   })
-   ```
+**4. 自定义构造函数**
+
+> 为什么要使用构造函数？因为可以批量创建函数。
+>
+> 为什么要使用this？因为每次调用构造函数都是新建一个对象，this用来指向新创建的对象 。
+
+```js
+// 这实则创建对象
+function CreateFunction(name, age, alive, sayHi) {
+	this.name = name
+	this.age = age
+	this.alive = alive
+	this.sayHi = sayHi
+}
+let fun = new CreateFunction('wife', 20, true, function() {  // 必须要new
+    return 'i love you'
+})
+```
 
 ### 函数作用域
 
@@ -678,7 +748,7 @@ var a3 = a.map( s => s.length )
 
 > 所述`this`关键字的计算结果为当前执行上下文的ThisBinding的值，由其函数的调用上下文及其调用位置确定 （通常是上一级作用域）（箭头函数this指向定义时的对象）。 
 
-注意：使用 `this.xx` 访问的是this指向的那个对象，而使用 `xx` 访问的是作用域链。
+**Tisps:** 使用 `this.xx` 访问的是this指向的那个对象，而使用 `xx` 访问的是作用域链。
 
 #### this指向
 
@@ -686,53 +756,53 @@ var a3 = a.map( s => s.length )
 >
 > （函数作用域、箭头函数是在定义函数、对象时确定的）
 
-1. 全局环境
+**1. 全局环境**
 
-   无论是否在严格模式下，在全局执行环境中（在任何函数体外部）`this` 都指向全局对象 **window**。
+无论是否在严格模式下，在全局执行环境中（在任何函数体外部）`this` 都指向全局对象 **window**。
 
-   ```js
-   // 在浏览器中, window 对象同时也是全局对象：
-   console.log(this === window); // true
-   
-   a = 37;
-   console.log(window.a); // 37
-   
-   this.b = "MDN";
-   console.log(window.b)  // "MDN"
-   console.log(b)         // "MDN"
-   ```
+```js
+// 在浏览器中, window 对象同时也是全局对象：
+console.log(this === window); // true
 
-2. 简单函数调用
+a = 37;
+console.log(window.a); // 37
 
-   没有使用new，没有以对象的形式调用，就单纯的声明函数然后调用，此时this指向window对象。
+this.b = "MDN";
+console.log(window.b)  // "MDN"
+console.log(b)         // "MDN"
+```
 
-3. bind、apply、call方法
+**2. 简单函数调用**
 
-   这三个方法定义在 `Function.prototype`，它们都能改变this指向，此时this指向它们的第一个参数。
+没有使用new，没有以对象的形式调用，就单纯的声明函数然后调用，此时this指向window对象。
 
-4. 箭头函数
+**3. bind、apply、call方法**
 
-   this与封闭的词法环境（闭包）的this保持一致，即被设置为箭头函数被创建时的环境。简单说就是根据外层作用域来决定this，继承外层函数调用的this绑定，且箭头函数绑定了父级作用域的上下文。如在全局环境下指向全局对象。
+这三个方法定义在 `Function.prototype`，它们都能改变this指向，此时this指向它们的第一个参数。
 
-5. 调用对象的方法
+**4. 箭头函数**
 
-   在典型的面向对象的编程中，需要一种识别和引用当前正在使用的**对象的方法**，this使对象能够访问自身的属性，其指向该对象。 
+this与封闭的词法环境（闭包）的this保持一致，即被设置为箭头函数被创建时的环境。简单说就是根据外层作用域来决定this，继承外层函数调用的this绑定，且箭头函数绑定了父级作用域的上下文。如在全局环境下指向全局对象。
 
-6. 原型链中的this
+**5. 调用对象的方法**
 
-   在原型链上定义的函数中使用时，指向调用该方法的对象。
+在典型的面向对象的编程中，需要一种识别和引用当前正在使用的**对象的方法**，this使对象能够访问自身的属性，其指向该对象。 
 
-7. 作为构造函数
+**6. 原型链中的this**
 
-   每次调用构造函数都是新建一个对象，this用来指向新创建的对象 。
+在原型链上定义的函数中使用时，指向调用该方法的对象。
 
-8. 作为一个DOM事件处理函数
+**7. 作为构造函数**
 
-   使用DOM找到节点添加事件，this指向该节点对象。
+每次调用构造函数都是新建一个对象，this用来指向新创建的对象 。
 
-9. 作为一个内联事件处理函数
+**8. 作为一个DOM事件处理函数**
 
-   在html节点上行内编写事件，调用JavaScript中的函数执行，this指向window对象。
+使用DOM找到节点添加事件，this指向该节点对象。
+
+**9. 作为一个内联事件处理函数**
+
+在html节点上行内编写事件，调用JavaScript中的函数执行，this指向window对象。
 
 **综上所述：**
 
@@ -748,14 +818,14 @@ var a3 = a.map( s => s.length )
 
 **总结：**
 
-> 如果要判断一个函数的`this`绑定，就需要找到这个函数的直接调用位置。然后可以顺序按照下面四条规则来判断`this`的绑定对象：
+> 如果要判断一个函数的 `this` 绑定，就需要找到这个函数的直接调用位置。然后可以顺序按照下面四条规则来判断 `this `的绑定对象（在哪定义便指向哪）：
 >
-> 1. 由`new`调用：绑定到新创建的对象
-> 2. 由`call`或`apply`、`bind`调用：绑定到指定的对象
-> 3. 由上下文对象调用：绑定到上下文对象
-> 4. 全局执行环境中（在任何函数体外部）：全局对象window
->
-> 在哪定义指向哪
+> 1.  由 `new` 调用：绑定到新创建的对象
+> 2.  由 `call`、 `apply`、 `bind` 调用：绑定到指定的对象
+> 3.  由上下文对象调用：绑定到上下文对象
+> 4.  全局执行环境中（在任何函数体外部）：全局对象window
+
+**Note:**
 
 ```js
 let num = 123
@@ -771,74 +841,74 @@ let和const声明的变量在存放于 `当前上下文环境 中（非栈底，
 
 #### 手动设置this指向
 
-1. bind()
+**1. bind()**
 
-   > 改变this，不自动调用函数，可接受列表和数组作为参数。
+> 改变this，不自动调用函数，可接受列表和数组作为参数。
 
-   创建一个新的函数，在 `bind()` 被调用时，这个新函数的 `this` 被指定为 `bind()` 的第一个参数，而其余参数将作为新函数的参数，供调用时使用。
+创建一个新的函数，在 `bind()` 被调用时，这个新函数的 `this` 被指定为 `bind()` 的第一个参数，而其余参数将作为新函数的参数，供调用时使用。
 
-   一旦使用bind后this会被永久的绑定到第一个参数，无论之后链式使用多少次bind修改this。
+一旦使用bind后this会被永久的绑定到第一个参数，无论之后链式使用多少次bind修改this。
 
-2. apply()
+**2. apply()**
 
-   > 改变this，自动调用函数，接受数组或伪数组作为参数。
+> 改变this，自动调用函数，接受数组或伪数组作为参数。
 
-   在一个对象的上下文中应用另一个对象的方法；参数能够以数组或伪数组形式传入。
+在一个对象的上下文中应用另一个对象的方法；参数能够以数组或伪数组形式传入。
 
-3. call()
+**3. call()**
 
-   > 改变this，自动调用函数，接受列表作为参数。
-   
-   在一个对象的上下文中应用另一个对象的方法；参数能够以列表形式传入。
-   
-   **注意：**call()方法的作用和 apply() 方法类似，区别就是`call()`方法接受的是**参数列表**，而`apply()`方法接受的是 **一个包含多个参数的数组** 。 
-   
-   ```js
-   let first_object = {
-   	num: 42
-   }
-   let second_object = {
-   	num: 24
-   }
-   
-   function multiple(mult) {
-   	return this.num * mult
-   }
-   
-   Function.prototype.bind = function(obj) {
-   	let method = this
-   	temp = function() {
-   		return method.apply(obj, arguments)
-   	}
-   	return temp
-   }
-   
-   let first_multiply = multiple.bind(first_object)
-   first_multiply(5) //返回42 * 5
-   
-   let second_multiply = multiple.bind(second_object)
-   second_multiply(5) //返回24 * 5
-   ```
-   
-   ```js
-   <button type="button" id="thebutton">点击</button>
-   
-   function BigComputer(answer) {
-   	this.the_answer = answer;
-   	this.ask_question = function() {
-   		alert(this.the_answer);
-   	}
-   }
-   
-   function addhandler() {
-   	var deep_thought = new BigComputer(42)
-   	the_button = document.getElementById('thebutton')
-   
-   	the_button.onclick = deep_thought.ask_question.call(deep_thought)
-   }
-   
-   window.onload = addhandler; //弹窗显示42
-   ```
+> 改变this，自动调用函数，接受列表作为参数。
+
+在一个对象的上下文中应用另一个对象的方法；参数能够以列表形式传入。
+
+**Tips:** `call()` 的作用和 `apply()` 类似，区别就是 `call()` 接受的是**参数列表**，而 `apply()` 接受的是**一个包含多个参数的数组** 。 
+
+```js
+let first_object = {
+	num: 42
+}
+let second_object = {
+	num: 24
+}
+
+function multiple(mult) {
+	return this.num * mult
+}
+
+Function.prototype.bind = function(obj) {
+	let method = this
+	temp = function() {
+		return method.apply(obj, arguments)
+	}
+	return temp
+}
+
+let first_multiply = multiple.bind(first_object)
+first_multiply(5) // 42 * 5
+
+let second_multiply = multiple.bind(second_object)
+second_multiply(5) // 24 * 5
+```
+
+```js
+<button type="button" id="thebutton">点击</button>
+
+function BigComputer(answer) {
+	this.the_answer = answer;
+	this.ask_question = function() {
+		alert(this.the_answer);
+	}
+}
+
+function addhandler() {
+	var deep_thought = new BigComputer(42)
+	the_button = document.getElementById('thebutton')
+
+	the_button.onclick = deep_thought.ask_question.call(deep_thought)
+}
+
+window.onload = addhandler; // 弹窗显示42
+```
 
 ## 对象
 
@@ -866,9 +936,9 @@ let和const声明的变量在存放于 `当前上下文环境 中（非栈底，
 >
 > **原型** 通过 **constructor** 指向构造函数。
 
-**tips:** 在目前的ES规范中，只能读取对象的原型而不能改变它，但借助于非标准的 `__proto__` 伪属性，是可以实现的。比如执行 `obj.__proto__ = null` 之后，`obj instanceof Object` 就会返回 `false` 了。
+**Tips:** 在目前的ES规范中，只能读取对象的原型而不能改变它，但借助于非标准的 `__proto__` 伪属性，是可以实现的。比如执行 `obj.__proto__ = null` 之后，`obj instanceof Object` 就会返回 `false` 了。
 
-1. **字面量**
+**1. 字面量**
 
 > let obj = { ... }  // 其中 obj 是变量，等号右侧的 { ... } 便是字面量。
 
@@ -884,9 +954,9 @@ let object = {
 // object ---> Object.prototype ---> null
 ```
 
-2. **new Object()**
+**2. new Object()**
 
-> **Object()** 是内置的构造函数，通过执行 **new** 运算符创建一个对象包装器，参数为对象（可选），创建后还可不断增加属性和方法。
+> `Object()` 是内置的构造函数，通过执行 `new` 运算符创建一个对象包装器，参数为对象（可选），创建后还可不断增加属性和方法。
 
 ```js
 // 不带参数
@@ -900,7 +970,7 @@ object.sayHi = function() {
 // object ---> Object.prototype ---> null
 ```
 
-3. **自定义构造函数**
+**3. 自定义构造函数**
 
 > 为什么要使用构造函数？因为可以批量创建对象。
 >
@@ -919,9 +989,9 @@ let object = new CreateObject('wife', 20, true, function() {  // 必须要new
 // object ---> CreateObject.prototype ---> Object.prototype ---> null
 ```
 
-4. **Object.create()**
+**4. Object.create()**
 
-> es5: **`Object.create()`**方法创建一个新对象，新对象的原型就是调用 create 方法时传入的第一个参数。
+> es5:  `Object.create()` 方法创建一个新对象，新对象的原型就是调用 create 方法时传入的第一个参数。
 
 ```js
 let a = {a: 1}
@@ -932,7 +1002,7 @@ let b = Object.create(a)
 console.log(b.a);  // 1 (继承而来)
 ```
 
-5. **关键字Class**
+**5. 关键字Class**
 
 > es6: 引入了一套新的关键字用来实现 [class](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Classes)。使用基于类语言的开发人员会对这些结构感到熟悉，但它们是不同的。JavaScript 仍然基于原型。
 
@@ -1007,10 +1077,10 @@ Date.getTime() // 获取 1970 年 1 月 1 日至今的毫秒数
 
 ##### 产生时间戳
 
-- new Date().valueOf() ，获取时间对象的原始值。
+- new Date().valueOf()，获取时间对象的原始值。
 - new Date().getTime()，获取 1970 年 1 月 1 日至今的毫秒数。
 - +new Date()，利用类型转换获取 1970 年 1 月 1 日至今的毫秒数。
-- new Date.now()，获取 1970 年 1 月 1 日至今的毫秒数。
+- Date.now()，获取 1970 年 1 月 1 日至今的毫秒数。
 
 ```js
 // 倒计时
@@ -1181,28 +1251,185 @@ Document.visibilityState // 返回文档的可见性，返回结果如下：
 
 ```js
 Element.appendChild() // 向元素添加新的子节点，作为最后一个子节点（只能添加一个节点）
-
 ```
-
-
 
 [更多DOM API](https://developer.mozilla.org/zh-CN/docs/Web/API/Document)
 
 #### BOM
 
-###  基本字符串和字符串对象的区别 
+## 对象拷贝方法
 
-> 别称 `基本包装类型`。
+```js
+// 原始对象
+let obj = {
+    name: 'wife',
+    age: 20,
+    alive: true,
+    adress: { city: 'xg' },
+    sayHi: function() { return 'i love you' }
+}
+obj
+```
 
-请注意区分 JavaScript 字符串对象和基本字符串值 . ( 对于 [`Boolean`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Boolean) 和[`Numbers`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Number) 也同样如此.)
+#### 1. 原始方式
 
-字符串字面量 (通过单引号或双引号定义) 和 直接调用 String 方法(没有通过 new 生成字符串对象实例)的字符串都是基本字符串。JavaScript会自动将基本字符串 **转换** 为字符串对象，只有将基本字符串转化为字符串对象之后才可以使用字符串对象的方法。当基本字符串需要调用一个字符串对象才有的方法或者查询值的时候(基本字符串是没有这些方法的)，JavaScript 会自动将基本字符串转化为字符串对象并且调用相应的方法或者执行查询。
+>  复制对象的原始方法是循环遍历原始对象，然后一个接一个地复制每个属性。该方法属于浅拷贝。 
 
-当使用基本类型的字符串调用字符串对象方法时，实际上发生了下面的过程：
+```js
+// 得出缺陷1、2、3、4
+function copy(mainObj) {
+    let objCopy = {}  // 存储 obj 对象的副本
+    let key
+    for(key in mainObj) {
+        objCopy[key] = mainObj[key]  // 复制每个属性到objCopy
+    }
+    return objCopy
+}
+copy(obj)
+```
 
-- 创建一个 `String` 的包装类型实例
-- 在实例上调用 `String对象` 方法
-- 销毁实例
+**缺陷：**
+
+-  `objCopy` 对象具有一个新的 `Object.prototype`方法，这与 `mainObj` 对象的原型方法不同，这不是我们想要的。我们需要精确的拷贝原始对象。 
+-  属性描述符不能被复制。值为 `false` 的 “可写(`writable`)” 描述符在 `objCopy` 对象中为 `true` 。 
+-  只复制了 `mainObj` 的可枚举属性。 
+
+-  如果原始对象存在一个值为对象的属性，那么该属性被拷贝的是引用地址，该 **属性中的属性** 是被 **原始对象** 和 **副本对象** 共同使用的。即修改**属性中的属性**时 **原始对象** 和 **副本对象** 都将产生变化；而修改 **属性** 改动的是引用地址， **原始对象** 和 **副本对象** 只会单方面变化。
+
+#### 2. 浅拷贝对象
+
+>   当拷贝源对象的顶级属性被复制而没有任何引用，并且拷贝源对象存在一个值为对象的属性，被复制为一个引用时，那么我说这个对象被浅拷贝。如果拷贝源对象的属性值是对象的引用，则只将该引用值复制到目标对象。 
+>
+>   浅层复制将复制顶级属性，但是嵌套对象将在原始（源）对象和副本（目标）对象之间是共享。 
+
+```js
+// 得出缺陷1
+// Object.assign() 方法用于将从一个或多个原始对象中的所有可枚举的属性值复制到目标对象。
+let objCopy = Object.assign({}, obj)
+objCopy
+```
+
+```js
+// 得出缺陷1、2
+// 这里新创几个对象验证
+// Object.create()：创建新对象，第一个参数为新对象的__proto__，第二个参数(可选)则是要添加到新对象的不可枚举（默认）属性（即其自身定义的属性，而不是其原型链上的枚举属性）对象的属性描述符以及相应的属性名称。
+// enumerable：可枚举(enumerable) 属性描述符，true为可枚举。（可枚举的会被复制）
+let someObj = {
+  a: 2,
+}
+ 
+let obj = Object.create(someObj, { 
+  b: {
+    value: 2,  
+  },
+  c: {
+    value: 3,
+    enumerable: true,  
+  },
+});
+ 
+let objCopy = Object.assign({}, obj);  // 进行浅拷贝
+objCopy // { c: 3 }
+```
+
+**缺陷：**
+
+- 如果原始对象存在一个值为对象的属性，那么该属性被拷贝的是引用地址，该 **属性中的属性** 是被 **原始对象** 和 **副本对象** 共同使用的。即修改**属性中的属性**时 **原始对象** 和 **副本对象** 都将产生变化；而修改 **属性** 改动的是引用地址， **原始对象** 和 **副本对象** 只会单方面变化。
+- 原型链上的属性和不可枚举的属性并没有被复制。
+
+#### 3. 深拷贝对象
+
+>  深度拷贝将拷贝遇到的每个对象。原始对象和副本对象不会共享任何东西，所以它将是原始对象的副本。
+
+```js
+// 得出缺陷1
+let objCopy = JSON.parse( JSON.stringify(obj) )
+objCopy
+```
+
+```js
+// 当对象没有二级属性，即没有 属性的属性 时此方法变相的为深拷贝
+let objCopy = Object.assign({}, obj)
+objCopy
+```
+
+```js
+// 使用递归的方式，得出缺陷2
+function deepCopy(obj) {
+  var objCopy = Array.isArray(obj) ? [] : {};  // 根据 原始对象 类型创建对应的 副本对象
+  if ( obj && typeof obj === "object" ) {  // 原始对象不能为空，并且是对象
+    for (key in obj) {  // 遍历可枚举属性
+      if (obj.hasOwnProperty(key)) {  // 返回一个布尔值，指示对象自身属性中是否具有指定的属性
+        if (obj[key] && typeof obj[key] === "object") {  // 对象拷贝
+          objCopy[key] = deepCopy(obj[key]);
+        } else {  // 数组拷贝 and 复制属性
+          objCopy[key] = obj[key];
+        }
+      }
+    }
+  }
+  return objCopy;
+}
+let objCopy = deepCopy(obj)
+console.log(objCopy)
+```
+
+**缺陷：**（完美深拷贝参看 5. 使用扩展运算符）
+
+-  此方法不能用于复制用户定义的对象方法。 即 **obj.sayHi** 并没有被复制。
+-  原型链上的属性和不可枚举的属性并没有被复制。
+
+#### 4. 复制循环引用对象
+
+>  循环引用对象是具有引用自身属性的对象。 
+
+```js
+let obj = { 
+  a: 'a',
+  b: { 
+    c: 'c',
+    d: 'd',
+  },
+}
+ 
+obj.c = obj.b;
+obj.e = obj.a;
+obj.b.c = obj.c;
+obj.b.d = obj.b;
+obj.b.e = obj.b.c;
+ 
+let newObj2 = Object.assign({}, obj);
+ 
+console.log(newObj2); 
+
+```
+
+ **结果：**
+
+![img](https://user-gold-cdn.xitu.io/2017/12/7/1602fdc09dcd68fe?imageslim) 
+
+**缺陷：**
+
+-  `Object.assign()` 适用于浅拷贝循环引用对象，但不适用于深度拷贝。 
+
+#### 5. 使用扩展运算符 (...)
+
+> 扩展运算符（spread）是三个点（`...`）。它好比 rest 参数的逆运算，将一个数组转为用逗号分隔的参数序列。 
+>
+> 该运算符主要用于函数调用。 
+
+```js
+let objCopy = { ...obj }
+objCopy
+```
+
+**缺陷：**
+
+- 这是深拷贝(完美)
+
+> 真的吗？待测试
+>
+> https://www.cnblogs.com/daiwenru/p/9139810.html
 
 ## 循环迭代
 
@@ -1350,7 +1577,7 @@ for (let value of arr) {
 }
 ```
 
-- **tips:** **for...in** 与 **for...of** 的区别
+- **Tips:** **for...in** 与 **for...of** 的区别
 
 > 两者都是迭代一些东西，区别在于迭代方式不同:
 >
