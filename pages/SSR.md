@@ -53,7 +53,7 @@ package-lock.json -描述安装依赖的具体版本号，最终拉取依赖是�
 
 绿色：vue的生命周期，运行在客户端
 
-![nuxt生命周期](https://upload-images.jianshu.io/upload_images/5531211-d1a3e5b36ee03f08.png)
+![nuxt生命周期](/.gitbook/assets/nuxt生命周期.jpg)
 
 执行顺序：
 
