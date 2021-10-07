@@ -1,26 +1,40 @@
 # JavaScript的基础理论
 
-## 预解析
+## JavaScript的执行过程
 
-> js引擎的运行分为两步：预解析（词法分析+语法分析），执行代码。
->
-> 预解析机制 = 变量预解析 + 函数预解析
+> js引擎的执行过程分为：`编译阶段` 和 `执行阶段`。
 
-变量预解析：提升变量的 **声明** 到 **当前作用域**的最前面（不包括let/const，因为它们处于词法环境）。
+### 编译阶段
 
-函数预解析：提升函数的 **声明** 到 **当前作用域** 的最前面(不包括真正赋值和调用)。
+> 编译阶段 = 预解析（词法分析+语法分析） + 生成代码
 
-先提升变量声明，后提升函数声明。
+预解析机制 = 变量预解析 + 函数预解析：
+
+- 变量预解析：仅提升变量的 `声明` 到 `当前作用域` 的最前面（不包括let/const，因为它们在执行阶段初始化）。
+
+- 函数预解析：仅提升函数的 `声明` 到 `当前作用域` 的最前面。
+
+先提升变量声明，后提升函数声明，导致 `函数` 是js的 `一等公民`。
+
+```js
+console.log(a); // ƒ a() { return 1 }
+function a() { return 1 }
+var a = 'a'
+
+console.log(b); // ƒ b() { return 1 }
+var b = 'b'
+function b() { return 1 }
+```
 
 变量的赋值可以分为三个阶段：
 
-1. 创建变量，在内存中开辟空间
+1. 创建（声明）变量，在内存中开辟空间；
 
-2. 初始化变量，将变量初始化为 `undefined`
+2. 初始化变量，将变量初始化为 `undefined`；
 
-3. 真正赋值
+3. 执行阶段才真正赋值。
 
-关于`let` 、`const`、`var` 和 `function`：
+关于`let` 、`const`、`var` 和 `function` 在编译阶段的处理：
 
 - `let` 、`const` 的创建过程被提升了，但是初始化没有提升。
 - `var` 的创建和初始化都被提升了。
@@ -32,24 +46,24 @@
 debugger
 let a = 'xg'
 {
-    console.log(foo)
-    let a = 'xg'
+    console.log(a) // Cannot access 'a' before initialization
+    let a = 'xg1'
 }
 ```
 
-## 事件循环Event Loop
+### 执行阶段
 
-> Event Loop是一个程序结构，用于等待和发送消息和事件。即 `js的执行机制`。
+> 事件循环Event Loop是一个程序结构，用于等待和发送消息和事件。即 `js的执行机制`。
 
-### 单线程
+#### 单线程
 
-`JavaScript` 是一门 **单线程** 语言，所有任务都在一个线程上 **排队执行**，不管是什么新框架新语法糖实现的所谓异步，其实都是用 **同步** 的方法去模拟的。
+`JavaScript` 是一门 `单线程` 语言，所有任务都在一个线程上 `排队执行`，不管是什么新框架新语法糖实现的所谓异步，其实都是用 `同步` 的方法去模拟的。
 
 如果是多线程则会引发复杂的同步问题，比如，假定JavaScript同时有两个线程，一个线程在某个DOM节点上添加内容，另一个线程删除了这个节点，这时浏览器应该以哪个线程为准，为了避免复杂性所以JavaScript是单线程的。
 
 为了利用多核CPU的计算能力，HTML5提出  [**Web Worker**](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Workers_API)，允许JavaScript脚本创建多个线程，但是子线程完全受主线程控制，且不得操作DOM。所以，这个新标准并没有改变JavaScript单线程的本质。
 
-### 同步任务、异步任务
+#### 同步任务、异步任务
 
 > js中所有任务可分为 `同步任务` 和 `异步任务`。
 
@@ -57,7 +71,7 @@ let a = 'xg'
 
 同步任务指不会被引擎挂起，在主线程上排队执行的任务。排队（压栈）形成了 `执行栈`，只有栈顶任务执行完毕出栈后，才能执行下一任务。
 
-Hint:  `promise` 的实例化的过程是属于同步的，而 `.then` 中的回调函数是属于异步的。
+Note:  `promise` 的实例化的过程是属于同步的，而 `.then` 中的回调函数是属于异步的。
 
 **异步任务**
 
@@ -67,13 +81,13 @@ Hint:  `promise` 的实例化的过程是属于同步的，而 `.then` 中的回
 
 异步任务指会被引擎挂起，不进入主线程，而是进入`任务队列`（task queue）的任务。不需要获取到异步结果也能执行下一任务，获取到异步结果后由引擎来决定其回调函数是否进入主线程执行。
 
-### 任务队列
+#### 任务队列
 
 JavaScript 运行时，除了一个正在运行的主线程，引擎还提供一个`任务队列`（task queue），里面是各种需要当前程序处理的异步任务。（根据异步任务的类型，实际存在多个任务队列。为了方便理解，这里假设只存在一个队列。）
 
 1. 主线程会先执行所有的同步任务，遇到异步任务的代码先不予执行；
 2. 执行完同步任务（由js引擎的`监控进程`检测执行栈是否为空）后，如果任务队列中没有执行完的异步任务的 `回调函数`，则会去执行其他异步任务；如果任务队列中有执行完的异步任务的 `回调函数`，则让其进入主线程作为同步任务立即执行；
-3. 重复1、2过程执行没有任何任务，这就是 **事件循环**。
+3. 重复过程1、2，这就是 `事件循环`。
 
 ![事件循环流程图](https://i.loli.net/2021/10/04/r6exoPV1Z32KDmT.png)
 
@@ -82,46 +96,51 @@ JavaScript 运行时，除了一个正在运行的主线程，引擎还提供一
 ```js
 <script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-<script type="text/javascript">
-    $(document).ready(function() {
-    $("button").click(function() {
-        init()
-    });
-});
 
-function init() {
-    debugger
-    console.log(1);
-    setTimeout(function() {
-        console.log(2);
-    }, 1000);
-    axios.get('http://39.107.221.146/api/homeslide')
-        .then(function(response) {
-        console.log(3);
-    })
-        .catch(function(error) {
-        console.log(4);
-    });
-    console.log(5);
-    axios.get('http://39.107.221.146/api/homenav')
-        .then(function(response) {
-        console.log(6);
-    })
-        .catch(function(error) {
-        console.log(7);
-    });
-    console.log(8);
-}
+<script type="text/javascript">
+  $(document).ready(function() {
+      $("button").click(function() {
+          init()
+      });
+  });
+
+  function init() {
+      debugger
+      console.log(1);
+      setTimeout(function() {
+          console.log(2);
+      }, 1000);
+      axios.get('http://39.107.221.146/api/homeslide')
+          .then(function(response) {
+          console.log(3);
+      })
+          .catch(function(error) {
+          console.log(4);
+      });
+      console.log(5);
+      axios.get('http://39.107.221.146/api/homenav')
+          .then(function(response) {
+          console.log(6);
+      })
+          .catch(function(error) {
+          console.log(7);
+      });
+      console.log(8);
+  }
 </script>
 ```
 
-### 宏任务、微任务
+#### 宏任务、微任务
 
 > 异步任务分为 `宏任务` 和 `微任务`。
 
-1. 首先 `script标签` 是一个宏任务，在当前宏任务执行完之前是不会执行下一个宏任务；
-2. 在执行宏任务过程中遇到微任务时先略过，执行完当前宏任务后率先执行遇到过的微任务，微任务执行完后才执行下一个宏任务;
-3. 执行微任务时遇到微任务，会执行完当前微任务后去执行遇到的微任务；遇到宏任务，会把宏任务放进任务队列列尾。
+- 首先 `script标签` 是一个宏任务，在当前宏任务执行完之前是不会执行下一个宏任务。
+
+- 在执行宏任务过程中遇到微任务时先略过，执行完当前宏任务后率先执行遇到过的微任务，微任务执行完后才执行下一个宏任务。
+
+- 执行微任务时遇到微任务，会执行完当前微任务后去执行遇到的微任务；遇到宏任务，会把宏任务放进任务队列队尾。
+
+**？** `微任务` 是 `宏任务` 的一个步骤，所以先执行 `宏任务` 然后逐条执行当前所有的 `微任务`，然后执行下一条 `宏任务`。（宏任务是宿主级别，微任务是JS级别，它们是包含关系）。
 
 **宏任务包含：**
 
@@ -143,17 +162,15 @@ function init() {
 | `MutationObserver`           | ✅      | ❌    |
 | `Promise.then catch finally` | ✅      | ✅    |
 
-**微任务** 是 **宏任务** 的一个步骤，所以先执行 **宏任务** 然后逐条执行当前所有的 **微任务**，然后执行下一条 **宏任务**。（宏任务是宿主级别，微任务是JS级别，它们是包含关系）。
-
-**Note：**宿主环境提供的方法是宏任务，例如setTimeout、setInterval。这些都是浏览器或者Node环境实现的。js引擎自身提供的是微任务，例如Promise。基本上平时接触到的除了Promise都是宏任务。 
+**Note：**宿主环境提供的方法是宏任务，例如setTimeout、setInterval，这些都是浏览器或者Node环境实现的。js引擎自身提供的是微任务，例如Promise。基本上平时接触到的除了Promise都是宏任务。 
 
 ![异步任务处理流程示意](https://i.loli.net/2021/10/04/iBMbC5aPVfSs4Qq.png)
 
-### 定时器
+#### 定时器
 
 > 定时器功能主要由setTimeout()和setInterval()这两个函数来完成，它们的内部运行机制完全一样，区别在于前者指定的代码是一次性执行，后者则为反复执行。 
 
-setTimeout()最短间隔在激活的选项卡中是 **4ms**，在未激活的选项卡中是 **1000ms**。
+setTimeout()最短间隔在激活的选项卡中是 `4ms`，在未激活的选项卡中是 `1000ms`。
 
 setTimeout()只是将事件插入了"任务队列"，必须等到当前代码（执行栈）执行完，主线程才会去执行它指定的回调函数。要是当前代码耗时很长，有可能要等很久，所以并没有办法保证，回调函数一定会在setTimeout()指定的时间执行。 
 
@@ -167,17 +184,13 @@ setTimeout()只是将事件插入了"任务队列"，必须等到当前代码（
 
 > 非对象、无方法的数据称为基本类型。
 
-包含7种：[string](https://developer.mozilla.org/zh-CN/docs/Glossary/String)，[number](https://developer.mozilla.org/zh-CN/docs/Glossary/Number)，[bigint](https://developer.mozilla.org/zh-CN/docs/Glossary/BigInt)，[boolean](https://developer.mozilla.org/zh-CN/docs/Glossary/Boolean)，[null](https://developer.mozilla.org/zh-CN/docs/Glossary/Null)，[undefined](https://developer.mozilla.org/zh-CN/docs/Glossary/undefined)，[symbol](https://developer.mozilla.org/zh-CN/docs/Glossary/Symbol) 。
+包含7种：[number](https://developer.mozilla.org/zh-CN/docs/Glossary/Number)，[bigint](https://developer.mozilla.org/zh-CN/docs/Glossary/BigInt)，[null](https://developer.mozilla.org/zh-CN/docs/Glossary/Null)，[undefined](https://developer.mozilla.org/zh-CN/docs/Glossary/undefined)，[string](https://developer.mozilla.org/zh-CN/docs/Glossary/String)，[boolean](https://developer.mozilla.org/zh-CN/docs/Glossary/Boolean)，[symbol](https://developer.mozilla.org/zh-CN/docs/Glossary/Symbol) 。
 
-**1. string**
-
-表示文本数据。字符串的长度是它的元素的数量，中英文都是占一个字符。第一个元素的索引为 0。
-
-**2. number**
+**1. number**
 
 基于 `IEEE 754`  标准的双精度64位二进制格式的值 `-(2^53 -1) ~ 2^53 -1`，超出范围数值不再安全（失真）。 
 
-**3. bigint**
+**2. bigint**
 
 表示任意精度的整数，可以超过数字的安全整数限制，**`Number.MAX_SAFE_INTEGER`** 常量表示在 JavaScript 中最大的安全整数（`2^53 -1`）。
 
@@ -189,11 +202,7 @@ x // 9007199254740992n
 typeof x // "bigint"
 ```
 
-**4. boolean**
-
-只有两个值：`true` 和 `false`。
-
-**5. null**
+**3. null**
 
 表示变量未指向任何对象，可以理解成尚未创建的对象。
 
@@ -207,7 +216,7 @@ typeof x // "bigint"
 
 - 作为对象原型链的终点。
 
-**6. undefined**
+**4. undefined**
 
 一个没有被赋值的变量会有个默认值 `undefined`，来源于预解析时的初始化，null 不等同于 undefined。
 
@@ -220,6 +229,14 @@ typeof x // "bigint"
 - 对象没有赋值的属性，该属性的值为undefined。
 
 - 函数没有返回值时，默认返回undefined。
+
+**5. string**
+
+表示文本数据。字符串的长度是它的元素的数量，中英文都是占一个字符。第一个元素的索引为 0。
+
+**6. boolean**
+
+只有两个值：`true` 和 `false`。
 
 **7. symbol**
 
@@ -240,7 +257,7 @@ symbol特性：
 - 不可枚举，不会在循环结构 `for(... in ...)` 中作为成员出现。
 - 匿名，不会出现在 `Object.getOwnPropertyNames()` 的返回数组里。
 
-#### 基本类型包装对象
+#### 基本类型的包装对象
 
 除了 `null` 和 `undefined` 之外，所有基本类型都有其对应的包装对象，其本质是 `特殊的引用类型`，可通过 [`valueOf()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/valueOf) 方法返回基本类型值。
 
@@ -265,6 +282,7 @@ typeof new String('ConardLi') // "object"
 typeof new String('ConardLi').valueOf() // "string"
 
 Object.prototype.toString.call('ConardLi') // "[object String]"
+Object.prototype.toString.call(new String('ConardLi')) // "[object String]"
 ```
 
 #### 引用类型
@@ -332,18 +350,7 @@ str.valueOf() // "12345"
 typeof str.valueOf() // "string"
 ```
 
-**3. instanceof（关系运算符）**
-
-检测  `constructor.prototype ` 是否存在于参数的原型链上，即某个实例对象是否是某个构造函数的实例，返回 `true` 和 `false`。
-
-```js
-let obj = new Object()
-obj instanceof Object // true
-```
-
-**Tips:** 在目前的ES规范中，只能读取对象的原型而不能改变它，但借助于非标准的 `__proto__` 伪属性，是可以实现的。比如执行 `obj.__proto__ = null` 之后，`obj instanceof Object` 就会返回 `false` 了。
-
-**4. Object.prototype.toString.call( ) **
+**3. Object.prototype.toString.call( ) **
 
 判断最具体的数据类型，返回 "[object *type*]"，其中 `type` 是对象的类型。
 
@@ -354,9 +361,18 @@ Object.prototype.toString.call(new Date) // [object Date]
 '[object String]'.slice(8, -1) // "String"
 ```
 
-**5. Array.isArray() 和 isNaN() **
+**4. instanceof（关系运算符）**
 
-判断对象是否为数组。
+检测  `constructor.prototype ` 是否存在于参数的原型链上，即某个实例对象是否是某个构造函数的实例，返回 `true` 和 `false`。
+
+```js
+let obj = new Object()
+obj instanceof Object // true
+```
+
+**Note:** 在目前的ES规范中，只能读取对象的原型而不能改变它，但借助于非标准的 `__proto__` 伪属性，是可以实现的。比如执行 `obj.__proto__ = null` 之后，`obj instanceof Object` 就会返回 `false` 了。
+
+**5. Array.isArray() 和 isNaN() **
 
 ```js
 // 是不是数组
@@ -371,9 +387,9 @@ isNaN('asd')
 
 #### 显式转换
 
->  显式转换指手动将各种类型的值，转换成数字、字符串、布尔值。 
+>  显式转换指手动将各种类型的值，转换成数值、字符串、布尔值。 
 
-**1. 转数字类型**
+**1. 转数值类型**
 
 - 使用构造函数 `Number()`
 
@@ -419,7 +435,7 @@ parseInt('100', 10) // 100
 parseInt('100', 2) // 4
 ```
 
-**Tips:** 在字符串以"0"为开始时旧的浏览器默认使用八进制基数；ECMAScript 5，默认的是十进制的基数。使用时最好带上进制(radix) 参数，用于指定使用哪一种进制。
+**Note:** 在字符串以"0"为开始时旧的浏览器默认使用八进制基数；ECMAScript 5，默认的是十进制的基数。使用时最好带上进制(radix) 参数，用于指定使用哪一种进制。
 
  - 使用方法 `parseFloat(string)`
 
@@ -538,7 +554,7 @@ if ('abc') { // true
 
 比如 `if语句` 的条件部分预期布尔类型，编译器会自动调用构造函数 `Boolean()` 进行转换。
 
- 除了以下六个值，其他都是自动转为`true`。
+ 除了以下五个值，其他都是自动转为`true`。
 
 ```js
 // 除了以下五个值的转换结果为 false，其他的值全部为 true
@@ -561,8 +577,91 @@ console.dir('输出：'+obj)  // [object Object]
 
 解：字符串拼接对象出现这种情况，实则就是数据类型转换问题。将 obj 对象利用 JSON.stringify() 转成字符串即可。
 var obj={a:1,b:'2'}
-console.dir('输出：'+JSON.stringify(obj))  // {"a":1,"b":"2"}
+console.dir('输出：'+JSON.stringify(obj))  // 输出：{"a":1,"b":"2"}
 ```
+
+## 闭包和作用域
+
+### 闭包
+
+**什么是闭包**
+
+在js中，通常函数执行完后在其内部定义的变量和函数（作用域）就会被清理，内存随之回收，但是由于闭包是建立在一个 `父函数` 内部的 `子函数`，如果 `子函数` 有访问 `父函数` 的作用域，则 `父函数` 执行完后其作用域不会被清理，导致 `子函数` 仍可以访问 `父函数` 的作用域，这就是 **闭包**。（大括号包裹起来形成 **代码块** 可形成闭包）
+
+```js
+function a() {
+    let a = 1
+    // 返回子函数
+    return () => a
+}
+// 执行父函数a，得到返回的子函数，a执行完后其作用域仍在需供子函数使用
+let b = a()
+// 执行b，即子函数，访问上级作用域打印出1
+console.log(b())
+```
+
+**解决了什么**
+
+使用闭包主要是为了设计私有的方法和变量。闭包的优点是可以避免全局污染，缺点是闭包会常驻内存，会增大内存使用量，使用不当很容易造成内存泄露。
+
+闭包有三个特性：
+
+1. 函数嵌套函数
+2. 子函数可以访问父函数能访问到的所有变量和函数，但父函数不能访问子函数内部的变量和函数。
+3. 父函数执行完后其作用域只有在没被子函数访问时才会被垃圾回收机制回收。
+
+**应用场景**
+
+- 作用域链
+- 路由懒加载
+- 异步方法的回调函数
+- 一个函数内部返回另一个函数
+- ... ...
+
+### 作用域
+
+> 函数执行时所在的作用域，是 **定义时** 的作用域，而不是调用时所在的作用域。
+
+**作用域**
+
+作用域就是当前的 `执行上下文环境`，包含了当前代码块（即闭包，用大括号括起来的；小括号括起来，末尾再添加一个小括号，是自调用函数）定义的变量和函数。
+
+es6之前只有全局作用域和函数作用域，之后增加了块作用域，这也是为什么在全局作用域代码块中let/const声明的变量无法在代码块外使用，但var声明的仍可使用。
+
+```js
+let a = 1;
+{ // 代码块，拥有块作用域
+  console.log(a); // 1
+  var b = 2;
+  let c = 3;
+}
+console.log(b); // 2
+console.log(c); // Uncaught ReferenceError: c is not defined
+foo();
+function foo() { // 子函数，拥有函数作用域
+  var d = 4;
+};
+console.log(d); // Uncaught ReferenceError: d is not defined
+```
+
+**作用域链**
+
+作用域可以被多层嵌套。例如，函数A可以包含函数B，函数B可以再包含函数C。B和C都形成了闭包，所以B可以访问A，C可以访问B和A。形成了 `window全局作用域 => A作用域 => B作用域 => C作用域`，这个称之为 `作用域链`。 
+
+访问原则：
+
+- 当前作用域没有所需变量就到上层作用域找，直至全局作用域 `window对象`。
+- 当前作用域无权访问下层作用域的变量和函数，只有调用方法的执行权限。
+
+**作用域和函数堆栈**
+
+|          | 函数作用域                                                   | 函数堆栈                                                     |
+| :------: | :----------------------------------------------------------- | ------------------------------------------------------------ |
+|   作用   | 可以访问代码块范围内的任何变量和函数。                       | 产生代码执行所需的环境，包含了被调用函数内部上下文环境及this指向。 |
+| 产生过程 | 1、在预解析时产生一个全局作用域，其全局对象是window。<br />2、在代码执行时用var定义的变量、函数都会添加到这个作用域（全局）上；如果存在闭包，以及用let、const定义的，则添加到下级作用域（非全局）上，从而形成作用域链。 | 1、在预解析时把全局对象window压进栈（栈名Global），从而在栈底产生首个执行上下文环境。<br />2、在代码执行时的动作（非函数调用）都处于这个执行上下文环境中；如果存在函数调用，则把被调函数内部的上下文环境和继承的this压进栈，代码执行完时生成返回值并出栈。 |
+| 访问方式 | 如果当前作用域没有所需值，便到上一层作用域中查找，直至找到全局作用域。 | 运行程序时先把全局环境（全局对象）window压进栈。当调用函数（跟访问对象不一样）时，把被调用的函数内部环境压进栈，执行完生成返回值出栈。 |
+
+**Note:** 当前作用域 == 当前执行上下文 == 当前闭包
 
 ## 函数
 
@@ -609,7 +708,6 @@ console.log(sum(2, 6));  // 8
 > 为什么要使用this？因为每次调用构造函数都是新建一个对象，this用来指向新创建的对象 。
 
 ```js
-// 这实则创建对象
 function CreateFunction(name, age, alive, sayHi) {
 	this.name = name
 	this.age = age
@@ -621,80 +719,11 @@ let fun = new CreateFunction('wife', 20, true, function() {  // 必须要new
 })
 ```
 
-### 函数作用域
-
-> 函数执行时所在的作用域，是 **定义时** 的作用域，而不是调用时所在的作用域。
-
-**函数作用域**
-
-用代码块（大括号包裹起来）可形成 **闭包** （小括号包裹函数，末尾在添加一个小括号，是自调用函数），即产生 **作用域**。
-
-在函数内定义的变量和函数不能在函数之外的任何地方访问，因为变量和函数仅仅在该函数的域的内部有定义。 
-
-**函数作用域链**
-
-函数可以被多层嵌套。例如，函数A可以包含函数B，函数B可以再包含函数C。B和C都形成了闭包，所以B可以访问A，C可以访问B和A。形成了 `window全局作用域 => A作用域 => B作用域 => C作用域`，这个称之为 **作用域链**。 
-
-访问原则：
-
-- 当前作用域没有所需变量就到上层作用域找，直至全局对象 **window**。
-- 当前作用域无权访问下层作用域的变量，只有调用执行权限。
-
-**作用域和函数堆栈**
-
-|          | 函数作用域                                                   | 函数堆栈                                                     |
-| :------: | :----------------------------------------------------------- | ------------------------------------------------------------ |
-|   作用   | 一个函数可以访问定义在其范围内的任何变量和函数。             | 产生代码执行所需的环境，包含了被调用函数内部上下文环境及this指向。 |
-| 产生过程 | 1、在预解析时产生一个全局作用域，其全局对象是window。<br />2、在代码执行时用var定义的变量、函数都会添加到这个作用域（全局）上；如果存在闭包，以及用let、const定义的，则添加到下级作用域（非全局）上，从而形成作用域链。 | 1、在预解析时把全局对象window压进栈（栈名Global），从而在栈底产生首个执行上下文环境。<br />2、在代码执行时的动作（非函数调用）都处于这个执行上下文环境中；如果存在函数调用，则把被调函数内部的上下文环境和继承的this压进栈，代码执行完时生成返回值并出栈。 |
-| 访问方式 | 如果当前作用域没有所需值，便到上一层作用域中查找，直至找到全局作用域。 | 运行程序时先把全局环境（全局对象）window压进栈。当调用函数（跟访问对象不一样）时，把被调用的函数内部环境压进栈，执行完生成返回值出栈。 |
-
-**Note:** 当前作用域 == 当前执行上下文 == 当前闭包
-   	作用域链 ！= 执行上下文栈 （作用域链产生了便会一直存在，而栈伴随着调用周期会变动）
-
-### 闭包 
-
-**什么是闭包**
-
-在js中，通常函数执行完后其 **作用域** 就会被清理，内存随之回收，但是由于闭包是建立在一个 **父函数** 内部的 **子函数**，如果 **子函数** 有访问 **父函数** 的作用域，则 **父函数** 执行完后其作用域不会被清理，导致 **子函数** 仍可以访问 **父函数** 的作用域，这就是 **闭包**。
-
-（大括号包裹起来形成 **代码块** 可形成闭包）
-
-```js
-function a() {
-    let a = 1
-    // 返回子函数
-    return () => a
-}
-// 执行父函数a，得到返回的子函数，a执行完后其作用域仍在需供子函数使用
-let b = a()
-// 执行b，即子函数，访问上级作用域打印出1
-console.log(b())
-```
-
-**解决了什么**
-
-使用闭包主要是为了设计私有的方法和变量。闭包的优点是可以避免全局变量的污染，缺点是闭包会常驻内存，会增大内存使用量，使用不当很容易造成内存泄露。
-
-闭包有三个特性：
-
-1. 函数嵌套函数
-2. 子函数可以访问定义在父函数中的所有变量和函数，以及父函数能访问到的所有变量和函数。 （作用域链原因）
-3. 父函数执行完后其作用域只有在没被子函数访问时才会被垃圾回收机制回收。
-
-**应用场景**
-
-- 作用域链
-
-- 路由懒加载
-- 异步方法的回调函数
-- 一个函数内部返回另一个函数
-- ... ...
-
 ### 函数参数
 
 **arguments对象**
 
-函数的所有实参会被保存在伪数组 **arguments** 对象中，它带有数组索引和length属性，但没有全部的Array对象的操作方法，如push、pop等。
+函数的所有实参会被保存在伪数组 `arguments` 对象中，它带有数组索引和length属性，但没有全部的Array对象的操作方法，如push、pop等。
 
 **默认参数**
 
@@ -725,7 +754,7 @@ console.log(arr); // [2, 4, 6]
 
 ### 箭头函数
 
-**箭头函数表达式** 的语法比 **函数表达式** 更简洁，但不能使用 `this`，`arguments`，`super` 和 `new.target`。箭头函数总是匿名的，它适用于那些本来需要匿名函数的地方，并且它不能用在构造函数中。
+`箭头函数表达式` 的语法比 `函数表达式` 更简洁，但不能使用 `this`，`arguments`，`super` 和 `new.target`。箭头函数总是匿名的，它适用于那些本来需要匿名函数的地方，并且它不能用在构造函数中。
 
 - 箭头函数捕捉闭包上下文的 `this` 值 ，即指向了父级作用域的上下文。
 
@@ -765,7 +794,7 @@ var a3 = a.map( s => s.length )
 无论是否在严格模式下，在全局执行环境中（在任何函数体外部）`this` 都指向全局对象 **window**。
 
 ```js
-// 在浏览器中, window 对象同时也是全局对象：
+// 在浏览器中, window对象同时也是全局对象
 console.log(this === window); // true
 
 a = 37;
@@ -782,19 +811,19 @@ console.log(b)         // "MDN"
 
 **3. bind、apply、call方法**
 
-这三个方法定义在 `Function.prototype`，它们都能改变this指向，此时this指向它们的第一个参数。
+这三个方法定义在 `Function.prototype`，它们都能改变this指向，此时this指向它们的第一个参数。（严格模式下函数是没有绑定到 this 上，这时候this是 undefined）
 
 **4. 箭头函数**
 
-this与封闭的词法环境（闭包）的this保持一致，即被设置为箭头函数被创建时的环境。简单说就是根据外层作用域来决定this，继承外层函数调用的this绑定，且箭头函数绑定了父级作用域的上下文。如在全局环境下指向全局对象。
+this指向箭头函数被创建时的上下文环境。简单说就是根据外层作用域来决定this，继承外层函数绑定的this，且箭头函数绑定了父级作用域的上下文。如在全局环境下指向全局对象。
 
 **5. 调用对象的方法**
 
-在典型的面向对象的编程中，需要一种识别和引用当前正在使用的**对象的方法**，this使对象能够访问自身的属性，其指向该对象。 
+在典型的面向对象的编程中，需要一种识别和引用当前正在使用的 `对象` 的方法，this指向该对象，使对象能够访问自身的属性。 
 
 **6. 原型链中的this**
 
-在原型链上定义的函数中使用时，指向调用该方法的对象。
+使用原型链上的方法时，指向调用该方法的对象。
 
 **7. 作为构造函数**
 
@@ -826,7 +855,7 @@ this与封闭的词法环境（闭包）的this保持一致，即被设置为箭
 >
 > 1.  由 `new` 调用：绑定到新创建的对象
 > 2.  由 `call`、 `apply`、 `bind` 调用：绑定到指定的对象
-> 3.  由上下文对象调用：绑定到上下文对象
+> 3.  由上下文环境的对象调用：绑定到上下文环境的对象
 > 4.  全局执行环境中（在任何函数体外部）：全局对象window
 
 **Note:**
@@ -839,8 +868,8 @@ console.log(num);  // 123
 
 问：为什么 this.num 是undefine？
 
-答：这是 `执行上下文栈，this指向` 问题。代码准备执行时（预解析），先压window对象进栈并产生全局作用域；正式执行代码时作用域扩张产生作用域链，当调用函数时会把被调函数内部的环境压进栈。
-let和const声明的变量在存放于 `当前上下文环境 中（非栈底，非全局）`，而 this 指向的是 window （栈底，全局）故访问不到，即打印undefined；如果使用 var，则声明的变量存放于 window 中，此时可以访问到。
+答：这是 `执行上下文栈，this指向` 问题。js引擎先压window对象进栈产生全局作用域；接下来作用域扩张产生作用域链，当调用函数时会把被调函数内部的环境（上下文环境）压进栈。
+let和const会产生 `块作用域`，其声明的变量会存放于 `当前上下文环境（非栈底，即非全局作用域）` 中，而 this 指向的是 window （栈底，全局作用域）故访问不到，即打印undefined；如果使用 var，则声明的变量存放于 window 中（var声明的变量只存在于函数作用域和全局作用域中），此时可以访问到。
 ```
 
 #### 手动设置this指向
@@ -865,7 +894,7 @@ let和const声明的变量在存放于 `当前上下文环境 中（非栈底，
 
 在一个对象的上下文中应用另一个对象的方法；参数能够以列表形式传入。
 
-**Tips:** `call()` 的作用和 `apply()` 类似，区别就是 `call()` 接受的是**参数列表**，而 `apply()` 接受的是**一个包含多个参数的数组** 。 
+**Note:** `call()` 的作用和 `apply()` 类似，区别就是 `call()` 接受的是 `参数列表`，而 `apply()` 接受的是`一个包含多个参数的数组` 。 
 
 ```js
 let first_object = {
@@ -916,7 +945,7 @@ window.onload = addhandler; // 弹窗显示42
 
 ## 对象
 
-> JavaScript中的对象分为三种类型：JS内置对象，浏览器对象（BOM+DOM），自定义对象。
+> JavaScript中的对象分为三种类型：自定义对象，JS内置对象，浏览器对象（BOM+DOM）。
 
 ### new 运算符
 
@@ -927,27 +956,30 @@ window.onload = addhandler; // 弹窗显示42
 
 **new 在执行时会做四件事情：**
 
-- 在内存中创建一个新的空对象
-- 让this指向这个新的对象
-- 执行构造函数，给这个新对象添加属性和方法
-- 返回这个新对象（所以构造函数里面不需要return）
+1. 在内存中创建一个新的空对象
+
+2. 让this指向这个新对象
+
+3. 执行构造函数，给这个新对象添加属性和方法
+
+4. 返回这个新对象（所以构造函数里面不需要return）
 
 ### 使用不同的方法来创建对象和生成原型链
 
-> **构造函数** 通过 **prototype** 属性访问原型；
+> `构造函数` 通过 `prototype` 属性访问原型；
 >
-> **实例化对象** 通过 **__ proto __** 或 **Object.getPrototypeOf(obj)** 访问原型；
+> `实例化对象` 通过 `__proto__`（非标准） 或 `Object.getPrototypeOf(obj)` 访问原型；
 >
-> **原型** 通过 **constructor** 指向构造函数。
+> `原型` 通过 `constructor` 访问构造函数。
 
-**Tips:** 在目前的ES规范中，只能读取对象的原型而不能改变它，但借助于非标准的 `__proto__` 伪属性，是可以实现的。比如执行 `obj.__proto__ = null` 之后，`obj instanceof Object` 就会返回 `false` 了。
+**Note:** 在目前的ES规范中，只能读取对象的原型而不能改变它，但借助于非标准的 `__proto__` 伪属性，是可以实现的。比如执行 `obj.__proto__ = null` 之后，`obj instanceof Object` 就会返回 `false` 了。
 
 **1. 字面量**
 
 > let obj = { ... }  // 其中 obj 是变量，等号右侧的 { ... } 便是字面量。
 
 ```js
-let object = {
+let obj = {
     name: 'wife',
     age: 20,
     alive: true,
@@ -955,7 +987,7 @@ let object = {
         return 'i love you'
     }
 }
-// object ---> Object.prototype ---> null
+// 原型链：obj ---> Object ---> null
 ```
 
 **2. new Object()**
@@ -964,14 +996,14 @@ let object = {
 
 ```js
 // 不带参数
-let object = new Object()  // 可以不要new
-object.name = 'wife'
-object.age = 20
-object.alive = true
-object.sayHi = function() {
+let obj = new Object()  // 可以不要new
+obj.name = 'wife'
+obj.age = 20
+obj.alive = true
+obj.sayHi = function() {
     return 'i love you'
 }
-// object ---> Object.prototype ---> null
+// 原型链：obj ---> Object ---> null
 ```
 
 **3. 自定义构造函数**
@@ -987,10 +1019,10 @@ function CreateObject(name, age, alive, sayHi) {
     this.alive = alive
     this.sayHi = sayHi
 }
-let object = new CreateObject('wife', 20, true, function() {  // 必须要new
+let obj = new CreateObject('wife', 20, true, function() {  // 必须要new
     return 'i love you'
 })
-// object ---> CreateObject.prototype ---> Object.prototype ---> null
+// 原型链：obj ---> CreateObject ---> Object ---> null
 ```
 
 **4. Object.create()**
@@ -998,17 +1030,17 @@ let object = new CreateObject('wife', 20, true, function() {  // 必须要new
 > es5:  `Object.create()` 方法创建一个新对象，新对象的原型就是调用 create 方法时传入的第一个参数。
 
 ```js
-let a = {a: 1}
-// a ---> Object.prototype ---> null
+let a = {foo: 1}
+// 原型链：a ---> Object ---> null
 
 let b = Object.create(a)
-// b ---> a ---> Object.prototype ---> null
-console.log(b.a);  // 1 (继承而来)
+// 原型链：b ---> a ---> Object ---> null
+console.log(b.foo);  // 1 (继承a而来)
 ```
 
 **5. 关键字Class**
 
-> es6: 引入了一套新的关键字用来实现 [class](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Classes)。使用基于类语言的开发人员会对这些结构感到熟悉，但它们是不同的。JavaScript 仍然基于原型。
+> es6: 引入了一套新的关键字用来实现 [class](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Classes)。使用基于类语言的开发人员会对这些结构感到熟悉，但它们是不同的，JavaScript 仍然基于原型。
 
 ```js
 "use strict";
@@ -1034,17 +1066,23 @@ class Square extends Polygon {
 }
 
 var square = new Square(2);
-// square ---> Square.prototype ---> Polygon.prototype ---> Object.prototype ---> null
+// ?原型链：square ---> Polygon ---> Object ---> Object ---> Object ---> null
 ```
 
 ### JS内置对象
 
 > 指JavaScript自身预定义的对象，在ECMAScript标准中定义，由浏览器厂家具体实现，由于标准的统一故兼容性问题不大。
 
-#### 全局对象
+#### 全局
 
 ```js
-isNaN() // 检查某个值是否是数字
+// 编码URL
+encodeURI() // 适用于：协议+端口+域名+路径
+encodeURIComponent() // 适用于：参数
+
+// 解码URL
+decodeURI() // 适用于：协议+端口+域名+路径
+decodeURIComponent() // 适用于：参数
 ```
 
 #### [Math](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Numbers_and_dates#%E6%95%B0%E5%AD%A6%E5%AF%B9%E8%B1%A1%EF%BC%88Math%EF%BC%89)
@@ -1068,23 +1106,30 @@ Math.floor(Math.random()*(max-min+1))+min
 #### [Date](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Date)
 
 ```js
-Date.getFullYear() // 获取当年
-Date.getMonth() // 获取当月（0—11）
-Date.getDate() // 获取当日
-Date.getDay() // 获取当周（0-6，星期天为第一天）
-Date.getHours() // 获取当前时
-Date.getMinutes() // 获取当前分
-Date.getSeconds() // 获取当前秒
+const date = new Date()
 
-Date.getTime() // 获取 1970 年 1 月 1 日至今的毫秒数
+date.getFullYear() // 获取当年
+date.getMonth() // 获取当月（0—11）
+date.getDate() // 获取当日
+date.getDay() // 获取当周（0-6，星期天为第一天）
+date.getHours() // 获取当前时
+date.getMinutes() // 获取当前分
+date.getSeconds() // 获取当前秒
+
+date.getTime() // 获取 1970 年 1 月 1 日至今的毫秒数（UTC +0）
 ```
 
 ##### 产生时间戳
 
-- new Date().valueOf()，获取时间对象的原始值。
-- new Date().getTime()，获取 1970 年 1 月 1 日至今的毫秒数。
-- +new Date()，利用类型转换获取 1970 年 1 月 1 日至今的毫秒数。
-- Date.now()，获取 1970 年 1 月 1 日至今的毫秒数。
+```js
+new Date() // Thu Oct 07 2021 02:31:32 GMT+0800 (中国标准时间)
+
+// 获取 1970 年 1 月 1 日至今的毫秒数
+new Date().valueOf()
+new Date().getTime() 
++new Date()
+Date.now()
+```
 
 ```js
 // 倒计时
@@ -1094,13 +1139,13 @@ function conutDown(time) {
 	let times = (inputTime - nowTime) / 1000
 
 	let d = parseInt(times / 60 / 60 / 24)
-	d = d < 10 ? '0' + d : d,
+	d = d < 10 ? '0' + d : d
 	
 	let h = parseInt(times / 60 / 60 % 24)
-	h = h < 10 ? '0' + h : h,
+	h = h < 10 ? '0' + h : h
 	
 	let m = parseInt(times / 60 % 60)
-	m = m < 10 ? '0' + m : m,
+	m = m < 10 ? '0' + m : m
 	
 	let s = parseInt(times % 60)
 	s = s < 10 ? '0' + s : s
@@ -1179,17 +1224,44 @@ String.replace() // 被用来在正则表达式和字符串直接比较，然后
 String.split() // 通过分离字符串成字串，将字符串对象分割成字符串数组。
 ```
 
+#### [Number](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Number)
+
+```js
+Number.MAX_VALUE // 可表示的最大的数
+Number.MIN_VALUE // 可表示的最小的数
+
+Number.MIN_SAFE_INTEGER // 最小的安全的整型数字(-(2^53) - 1))
+Number.MAX_SAFE_INTEGER // 最大的安全的整型数字(+(2^53) - 1))
+
+Number.toFixed() // 四舍五入为指定小数位数的数字
+Number.isInteger() // 判断给定的参数是否为整数
+```
+
+#### [RegExp](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/RegExp)
+
+```js
+RegExp.test() // 检测一个字符串是否匹配某个模式
+
+// 支持正则表达式的 String 对象的方法
+String.search() // 检索与正则表达式相匹配的值
+String.match() // 找到一个或多个正则表达式的匹配
+String.replace() // 替换与正则表达式匹配的子串
+String.split() // 把字符串分割为字符串数组
+```
+
 ### 浏览器对象
 
 > 指JavaScript运行环境（即浏览器）提供的对象，由浏览器厂家自定义并实现，一些主要的对象已被大部分浏览器兼容。
 >
 > 浏览器对象分为两类：DOM（文档对象模型）、BOM（浏览器对象模型）。
 
+#### BOM
+
+[BOM](https://www.runoob.com/jsref/obj-window.html)
+
 #### DOM
 
 > DOM（Document Object Model——文档对象模型）是用来呈现以及与任意 HTML 或 XML文档交互的API。DOM 是载入到浏览器中的文档模型，以节点树的形式来表现文档，每个节点代表文档的构成部分（例如:页面元素、字符串或注释等等）。 
->
-> DOM 并不是天生就被规范好了的，它是浏览器开始实现[JavaScript](https://developer.mozilla.org/en-US/docs/Glossary/JavaScript)时才出现的。这个传统的 DOM 有时会被称为 DOM 0。现在， WHATWG维护DOM现存标准。
 >
 > DOM 接口中包含许多接口，包含Document、Element、Node、Event等等。
 
@@ -1257,14 +1329,14 @@ Document.visibilityState // 返回文档的可见性，返回结果如下：
 Element.appendChild() // 向元素添加新的子节点，作为最后一个子节点（只能添加一个节点）
 ```
 
-[更多DOM API](https://developer.mozilla.org/zh-CN/docs/Web/API/Document)
-
-#### BOM
+[更多DOM API](https://developer.mozilla.org/zh-CN/docs/Web/API/Document_Object_Model)
 
 ## 对象拷贝方法
 
 ```js
 // 原始对象
+Object.prototype.a = '1'
+Object.prototype.aa = () => 'a1'
 let obj = {
     name: 'wife',
     age: 20,
@@ -1275,7 +1347,7 @@ let obj = {
 obj
 ```
 
-#### 1. 原始方式
+### 原始方式
 
 >  复制对象的原始方法是循环遍历原始对象，然后一个接一个地复制每个属性。该方法属于浅拷贝。 
 
@@ -1300,7 +1372,7 @@ copy(obj)
 
 -  如果原始对象存在一个值为对象的属性，那么该属性被拷贝的是引用地址，该 **属性中的属性** 是被 **原始对象** 和 **副本对象** 共同使用的。即修改**属性中的属性**时 **原始对象** 和 **副本对象** 都将产生变化；而修改 **属性** 改动的是引用地址， **原始对象** 和 **副本对象** 只会单方面变化。
 
-#### 2. 浅拷贝对象
+### 浅拷贝对象
 
 >   当拷贝源对象的顶级属性被复制而没有任何引用，并且拷贝源对象存在一个值为对象的属性，被复制为一个引用时，那么我说这个对象被浅拷贝。如果拷贝源对象的属性值是对象的引用，则只将该引用值复制到目标对象。 
 >
@@ -1314,6 +1386,13 @@ objCopy
 ```
 
 ```js
+// 得出缺陷1
+// 扩展运算符
+let objCopy = { ...obj }
+objCopy
+```
+
+```js
 // 得出缺陷1、2
 // 这里新创几个对象验证
 // Object.create()：创建新对象，第一个参数为新对象的__proto__，第二个参数(可选)则是要添加到新对象的不可枚举（默认）属性（即其自身定义的属性，而不是其原型链上的枚举属性）对象的属性描述符以及相应的属性名称。
@@ -1321,7 +1400,7 @@ objCopy
 let someObj = {
   a: 2,
 }
- 
+
 let obj = Object.create(someObj, { 
   b: {
     value: 2,  
@@ -1339,17 +1418,11 @@ objCopy // { c: 3 }
 **缺陷：**
 
 - 如果原始对象存在一个值为对象的属性，那么该属性被拷贝的是引用地址，该 **属性中的属性** 是被 **原始对象** 和 **副本对象** 共同使用的。即修改**属性中的属性**时 **原始对象** 和 **副本对象** 都将产生变化；而修改 **属性** 改动的是引用地址， **原始对象** 和 **副本对象** 只会单方面变化。
-- 原型链上的属性和不可枚举的属性并没有被复制。
+- 原型链上的属性和不可枚举的属性并没有被复制。 
 
-#### 3. 深拷贝对象
+### 深拷贝对象
 
 >  深度拷贝将拷贝遇到的每个对象。原始对象和副本对象不会共享任何东西，所以它将是原始对象的副本。
-
-```js
-// 得出缺陷1
-let objCopy = JSON.parse( JSON.stringify(obj) )
-objCopy
-```
 
 ```js
 // 当对象没有二级属性，即没有 属性的属性 时此方法变相的为深拷贝
@@ -1358,82 +1431,34 @@ objCopy
 ```
 
 ```js
-// 使用递归的方式，得出缺陷2
-function deepCopy(obj) {
-  var objCopy = Array.isArray(obj) ? [] : {};  // 根据 原始对象 类型创建对应的 副本对象
-  if ( obj && typeof obj === "object" ) {  // 原始对象不能为空，并且是对象
-    for (key in obj) {  // 遍历可枚举属性
-      if (obj.hasOwnProperty(key)) {  // 返回一个布尔值，指示对象自身属性中是否具有指定的属性
-        if (obj[key] && typeof obj[key] === "object") {  // 对象拷贝
-          objCopy[key] = deepCopy(obj[key]);
-        } else {  // 数组拷贝 and 复制属性
-          objCopy[key] = obj[key];
-        }
-      }
-    }
-  }
-  return objCopy;
-}
-let objCopy = deepCopy(obj)
-console.log(objCopy)
-```
-
-**缺陷：**（完美深拷贝参看 5. 使用扩展运算符）
-
--  此方法不能用于复制用户定义的对象方法。 即 **obj.sayHi** 并没有被复制。
--  原型链上的属性和不可枚举的属性并没有被复制。
-
-#### 4. 复制循环引用对象
-
->  循环引用对象是具有引用自身属性的对象。 
-
-```js
-let obj = { 
-  a: 'a',
-  b: { 
-    c: 'c',
-    d: 'd',
-  },
-}
- 
-obj.c = obj.b;
-obj.e = obj.a;
-obj.b.c = obj.c;
-obj.b.d = obj.b;
-obj.b.e = obj.b.c;
- 
-let newObj2 = Object.assign({}, obj);
- 
-console.log(newObj2); 
-
-```
-
- **结果：**
-
-![img](https://user-gold-cdn.xitu.io/2017/12/7/1602fdc09dcd68fe?imageslim) 
-
-**缺陷：**
-
--  `Object.assign()` 适用于浅拷贝循环引用对象，但不适用于深度拷贝。 
-
-#### 5. 使用扩展运算符 (...)
-
-> 扩展运算符（spread）是三个点（`...`）。它好比 rest 参数的逆运算，将一个数组转为用逗号分隔的参数序列。 
->
-> 该运算符主要用于函数调用。 
-
-```js
-let objCopy = { ...obj }
+// 得出缺陷1
+let objCopy = JSON.parse( JSON.stringify(obj) )
 objCopy
 ```
 
+```js
+// 完美深拷贝 - 对象及原型链上的属性、方法都被深拷贝
+function deepClone(obj) {
+  // 对常见的“非”值，直接返回原来值
+  if ([null, undefined, NaN, false].includes(obj)) return obj;
+  if (typeof obj !== "object" && typeof obj !== 'function') {
+    //原始类型直接返回
+    return obj;
+  }
+  var o = Array.isArray(obj) ? [] : {};
+  for (let i in obj) {
+    if (obj.hasOwnProperty(i)) {
+      o[i] = typeof obj[i] === "object" ? deepClone(obj[i]) : obj[i];
+    }
+  }
+  return o;
+}
+deepClone(obj)
+```
+
 **缺陷：**
 
-- 这是深拷贝(完美)
-
-> 真的吗？待测试
->
-> https://www.cnblogs.com/daiwenru/p/9139810.html
+-  此方法不能用于复制用户定义的对象方法。 即 **obj.sayHi** 并没有被复制。
 
 ## 循环迭代
 
@@ -1490,7 +1515,7 @@ console.log(str);
 
 - **break** 语句
 
-> 用于终止当前循环，或者是链接到 **label** 语句。
+> 用于终止循环，或者是链接到 **label** 语句。
 >
 > 注：**return** 语句是终止函数的执行，并返回一个指定的值给函数调用者。
 
@@ -1581,7 +1606,7 @@ for (let value of arr) {
 }
 ```
 
-- **Tips:** **for...in** 与 **for...of** 的区别
+- **Note:** **for...in** 与 **for...of** 的区别
 
 > 两者都是迭代一些东西，区别在于迭代方式不同:
 >
@@ -1696,7 +1721,7 @@ for (let key of arr) {
 |  阻塞  | 主线程会在调用时进入阻塞态，直到结果返回，再继续运行，相当于需要整个操作全部结束了，调用才会返回。 |
 | 非阻塞 | 进程不用等待函数返回，可以做做别的事情。（如果接下来马上需要返回的结果，那么与阻塞并无区别） |
 
-**注：** 
+**Note:** 
 
 进程的五大状态：创建、就绪、运行、阻塞、终止。
 
