@@ -83,7 +83,7 @@ Note:  `promise` 的实例化的过程是属于同步的，而 `.then` 中的回
 
 #### 任务队列
 
-JavaScript 运行时，除了一个正在运行的主线程，引擎还提供一个`任务队列`（task queue），里面是各种需要当前程序处理的异步任务。（根据异步任务的类型，实际存在多个任务队列。为了方便理解，这里假设只存在一个队列。）
+JavaScript 运行时，除了一个正在运行的主线程，引擎还提供一个`任务队列`（task queue），里面是各种需要当前程序处理的异步任务的回调函数。（根据异步任务的类型，实际存在多个任务队列。为了方便理解，这里假设只存在一个队列。）
 
 1. 主线程会先执行所有的同步任务，遇到异步任务的代码先不予执行；
 2. 执行完同步任务（由js引擎的`监控进程`检测执行栈是否为空）后，如果任务队列中没有执行完的异步任务的 `回调函数`，则会去执行其他异步任务；如果任务队列中有执行完的异步任务的 `回调函数`，则让其进入主线程作为同步任务立即执行；
@@ -134,13 +134,12 @@ JavaScript 运行时，除了一个正在运行的主线程，引擎还提供一
 
 > 异步任务分为 `宏任务` 和 `微任务`。
 
-- 首先 `script标签` 是一个宏任务，在当前宏任务执行完之前是不会执行下一个宏任务。
+宏任务、微任务执行过程：
 
-- 在执行宏任务过程中遇到微任务时先略过，执行完当前宏任务后率先执行遇到过的微任务，微任务执行完后才执行下一个宏任务。
+- 遇到微任务时，在处理完当前任务后率先执行遇到的微任务；
+- 遇到宏任务时，当前宏任务执行完后才会执行遇到的宏任务。
 
-- 执行微任务时遇到微任务，会执行完当前微任务后去执行遇到的微任务；遇到宏任务，会把宏任务放进任务队列队尾。
-
-**？** `微任务` 是 `宏任务` 的一个步骤，所以先执行 `宏任务` 然后逐条执行当前所有的 `微任务`，然后执行下一条 `宏任务`。（宏任务是宿主级别，微任务是JS级别，它们是包含关系）。
+宏任务是宿主级别，微任务是JS级别，它们是包含关系，所以先执行 `宏任务` 然后逐条执行当前所有的 `微任务`，然后执行下一条 `宏任务`。
 
 **宏任务包含：**
 
@@ -151,8 +150,7 @@ JavaScript 运行时，除了一个正在运行的主线程，引擎还提供一
 | `setInterval`           | ✅      | ✅    |
 | `setImmediate`          | ❌      | ✅    |
 | `requestAnimationFrame` | ✅      | ❌    |
-| script                  |        |      |
-| setTimeout              |        |      |
+| `script`                | ✅      | ✅    |
 
 **微任务包含：**
 
@@ -164,7 +162,7 @@ JavaScript 运行时，除了一个正在运行的主线程，引擎还提供一
 
 **Note：**宿主环境提供的方法是宏任务，例如setTimeout、setInterval，这些都是浏览器或者Node环境实现的。js引擎自身提供的是微任务，例如Promise。基本上平时接触到的除了Promise都是宏任务。 
 
-![异步任务处理流程示意](https://i.loli.net/2021/10/04/iBMbC5aPVfSs4Qq.png)
+![异步任务处理流程示意图](https://i.loli.net/2021/10/04/iBMbC5aPVfSs4Qq.png)
 
 #### 定时器
 
@@ -842,7 +840,7 @@ this指向箭头函数被创建时的上下文环境。简单说就是根据外�
 -  在全局环境中，this指向全局对象window。
 -  在简单调用中，this指向window对象。（严格模式下函数是没有绑定到 this 上，这时候this是 undefined）
 -  在bind、apply、call方法中，this指向第一个参数。
--  在箭头函数中，this继承外层函数的this。
+-  在箭头函数中，this继承父级作用域的this。
 -  在对象方法中，this指向调用它所在方法的对象。 
 -  在原型链中，this指向调用该方法的对象。
 -  在构造函数中，this指向新创建的对象。
@@ -851,11 +849,11 @@ this指向箭头函数被创建时的上下文环境。简单说就是根据外�
 
 **总结：**
 
-> 如果要判断一个函数的 `this` 绑定，就需要找到这个函数的直接调用位置。然后可以顺序按照下面四条规则来判断 `this `的绑定对象（在哪定义便指向哪）：
+> 如果要判断一个函数的 `this` 绑定，就需要找到这个函数的直接调用位置。然后可以顺序按照下面四条规则来判断 `this `的绑定对象：
 >
 > 1.  由 `new` 调用：绑定到新创建的对象
 > 2.  由 `call`、 `apply`、 `bind` 调用：绑定到指定的对象
-> 3.  由上下文环境的对象调用：绑定到上下文环境的对象
+> 3.  由上下文环境的对象调用：绑定到上下文环境的对象（在哪调用便指向哪）
 > 4.  全局执行环境中（在任何函数体外部）：全局对象window
 
 **Note:**
@@ -890,7 +888,7 @@ let和const会产生 `块作用域`，其声明的变量会存放于 `当前上�
 
 **3. call()**
 
-> 改变this，自动调用函数，接受列表作为参数。
+> 改变this，自动调用函数，接受逗号隔开的参数。
 
 在一个对象的上下文中应用另一个对象的方法；参数能够以列表形式传入。
 
@@ -954,15 +952,13 @@ window.onload = addhandler; // 弹窗显示42
 >  1. 构造函数用于创建对象，建议首字母要大写。
 >  2. new要和构造函数要一起使用才有意义。构造函数是特殊（创建对象）的函数，如果不使用new自定义封装一个构造函数需要手动返回创建的实例化对象，而使用new则不需。
 
-**new 在执行时会做四件事情：**
+**new 在执行时会做五件事情：**
 
 1. 在内存中创建一个新的空对象
-
-2. 让this指向这个新对象
-
-3. 执行构造函数，给这个新对象添加属性和方法
-
-4. 返回这个新对象（所以构造函数里面不需要return）
+2. 将新对象的原型指向构造函数
+3. 让this指向这个新对象
+4. 执行构造函数，给这个新对象添加属性和方法
+5. 返回这个新对象（所以构造函数里面不需要return）
 
 ### 使用不同的方法来创建对象和生成原型链
 
@@ -1459,6 +1455,107 @@ deepClone(obj)
 **缺陷：**
 
 -  此方法不能用于复制用户定义的对象方法。 即 **obj.sayHi** 并没有被复制。
+
+## 本地存储方式
+
+> 浏览器提供了四种方式：localStorage、sessionStorage、cookier、IndexedDB。
+
+**1. 区别**
+
+1. 传递方式不同
+
+   cookie在每次请求都会发送回服务器，即使不需要；
+
+   localStorage和sessionStorage不会自动把数据发给服务器，仅在本地保存使用。
+
+2. 数据大小不同
+
+   cookie数据不能超过4k；
+
+   localStorage和sessionStorage数据根据浏览器不同存储大小也不同，2.5MB~10MB。
+
+3. 数据有效期不同
+
+   cookie默认标签页关闭时删除，设置过期时间后则在到期前有效，即使标签页或浏览器关闭；
+
+   localStorage始终有效，即使窗口或浏览器关闭也一直保存，因此用作持久保存数据；
+
+   sessionStorage仅在当前浏览器窗口关闭前有效，用于临时会话时保存数据。
+
+4. 作用域不同
+
+   cookie、localStorage 在所有同源窗口中都是共享的；
+
+   sessionStorage仅作用于当前标签页。
+
+共同点：都保存在浏览器端。
+
+**2. 使用**
+
+- cookier
+
+```js
+// 读取cookie
+document.cookie
+
+// 创建cookie - 值/过期时间/路径
+document.cookie = "username=John Doe; expires=Thu, 18 Dec 2043 12:00:00 GMT; path=/";
+
+// 删除cookie - 过期时间设为过去
+document.cookie = "username=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+```
+
+- localStorage
+
+localStorage 只支持 string 类型的存储，其他类型会自动转成字符串；如果要存储json，则在保存时需用  `JSON.stringify(value)`，使用时 `JSON.parse(value)`。
+
+```js
+// 保存
+localStorage.setItem("key", "value");
+localStorage["key"] = 1;
+localStorage.key = 1;
+
+// 读取
+localStorage.getItem("key");
+localStorage["key"];
+localStorage.key;
+
+// 删除
+localStorage.removeItem("key");
+
+// 清空
+localStorage.clear();
+```
+
+- sessionStorage
+
+_blank 方式新开窗口，sessionStorage 存储的数据会丢失，需设置 `rel` 属性，`<a href="***" target="_blank" rel="opener noopener nofollow ugc">打开新标签页</a>`。
+
+```js
+// 保存
+sessionStorage.setItem("key", "value");
+sessionStorage["key"] = 1;
+sessionStorage.key = 1;
+
+// 读取
+sessionStorage.getItem("key");
+sessionStorage["key"];
+sessionStorage.key;
+
+// 删除
+sessionStorage.removeItem("key");
+
+// 清空
+sessionStorage.clear();
+```
+
+- IndexedDB
+
+> 浏览器提供的本地数据库，它可以被网页脚本创建和操作。
+
+优势：允许储存大量数据，提供查找接口，还能建立索引。
+
+[基本操作](https://www.ruanyifeng.com/blog/2018/07/indexeddb.html)
 
 ## 循环迭代
 
